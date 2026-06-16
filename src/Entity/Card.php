@@ -17,13 +17,16 @@ class Card
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $nom = null;
+    private ?string $name = null;
 
     #[ORM\Column(length: 255)]
     private ?string $extension = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $numero = null;
+    private ?string $number = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $image = null;
 
     #[ORM\ManyToOne(inversedBy: 'cards')]
     #[ORM\JoinColumn(nullable: false)]
@@ -45,14 +48,14 @@ class Card
         return $this->id;
     }
 
-    public function getNom(): ?string
+    public function getName(): ?string
     {
-        return $this->nom;
+        return $this->name;
     }
 
-    public function setNom(string $nom): static
+    public function setName(string $name): static
     {
-        $this->nom = $nom;
+        $this->name = $name;
 
         return $this;
     }
@@ -69,14 +72,26 @@ class Card
         return $this;
     }
 
-    public function getNumero(): ?string
+    public function getNumber(): ?string
     {
-        return $this->numero;
+        return $this->number;
     }
 
-    public function setNumero(string $numero): static
+    public function setNumber(string $number): static
     {
-        $this->numero = $numero;
+        $this->number = $number;
+
+        return $this;
+    }
+
+    public function getImage(): ?string
+    {
+        return $this->image;
+    }
+
+    public function setImage(?string $image): static
+    {
+        $this->image = $image;
 
         return $this;
     }

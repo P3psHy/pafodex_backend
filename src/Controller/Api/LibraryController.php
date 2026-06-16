@@ -6,6 +6,7 @@ use App\Entity\Card;
 use App\Entity\User;
 use App\Entity\Library;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -64,21 +65,32 @@ class LibraryController extends AbstractController
             ];
         }
 
-        $cards = $this->em->getRepository(Card::class)->createQueryBuilder('c')
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = 25;
+
+        $query = $this->em->getRepository(Card::class)->createQueryBuilder('c')
+            ->select('DISTINCT c')
             ->join('c.sets', 's')
             ->join('s.library', 'l')
             ->where('l.id = :libraryId')
             ->setParameter('libraryId', $library->getId())
-            ->getQuery()
-            ->getResult();
+            ->orderBy('c.id', 'ASC')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery();
+
+        $paginator = new Paginator($query, true);
+        $total = count($paginator);
+        $pages = (int) ceil($total / $limit);
 
         $cardsResult = [];
-        foreach ($cards as $card) {
+        foreach ($paginator as $card) {
             $cardsResult[] = [
                 'id' => $card->getId(),
-                'nom' => $card->getNom(),
+                'name' => $card->getName(),
                 'extension' => $card->getExtension(),
-                'numero' => $card->getNumero(),
+                'number' => $card->getNumber(),
+                'image' => $card->getImage(),
                 'gameType' => [
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
@@ -91,6 +103,12 @@ class LibraryController extends AbstractController
             'userId' => $library->getUser()->getId(),
             'sets' => $sets,
             'cards' => $cardsResult,
+            'pagination' => [
+                'page' => $page,
+                'perPage' => $limit,
+                'total' => $total,
+                'pages' => $pages,
+            ],
         ]);
     }
 }
