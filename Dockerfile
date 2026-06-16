@@ -16,9 +16,10 @@ WORKDIR /app
 
 COPY . .
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# IMPORTANT : on désactive les scripts Symfony Flex
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-RUN php bin/console cache:clear --env=prod
+RUN php bin/console cache:clear --env=prod --no-warmup
 
 EXPOSE 10000
 
