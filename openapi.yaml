@@ -1,0 +1,584 @@
+openapi: 3.0.3
+info:
+  title: Pafodex Backend API
+  version: 1.0.0
+  description: |
+    Documentation Swagger de l'API Pafodex.
+    Les endpoints exposés sont détaillés avec les payloads, paramètres, réponses et pagination.
+servers:
+  - url: http://localhost:8000
+    description: Serveur local
+paths:
+  /api/register:
+    post:
+      tags:
+        - Auth
+      summary: Enregistrer un nouvel utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/login:
+    post:
+      tags:
+        - Auth
+      summary: Authentifier un utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/logout:
+    post:
+      tags:
+        - Auth
+      summary: Déconnecter l'utilisateur
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me:
+    get:
+      tags:
+        - Auth
+      summary: Récupérer les informations de l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Informations utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/cards:
+    post:
+      tags:
+        - Cards
+      summary: Créer une carte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardRequest'
+      responses:
+        '201':
+          description: Carte créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/library:
+    get:
+      tags:
+        - Library
+      summary: Récupérer la bibliothèque de l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: page
+          in: query
+          description: Numéro de page pour la pagination des cartes
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bibliothèque de l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/sets:
+    get:
+      tags:
+        - Sets
+      summary: Récupérer la liste des sets de l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des sets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SetSummary'
+    post:
+      tags:
+        - Sets
+      summary: Créer un nouveau set pour l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSetRequest'
+      responses:
+        '201':
+          description: Set créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetSummary'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/sets/{setId}:
+    get:
+      tags:
+        - Sets
+      summary: Récupérer les cartes d'un set spécifique
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: setId
+          in: path
+          description: Identifiant du set
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Numéro de page pour la pagination des cartes
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste paginée des cartes du set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CardResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Set introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/sets/{setId}/card:
+    post:
+      tags:
+        - Sets
+      summary: Ajouter une carte à un set
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: setId
+          in: path
+          description: Identifiant du set
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCardToSetRequest'
+      responses:
+        '200':
+          description: Carte ajoutée au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '400':
+          description: Requête invalide ou type incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Set ou carte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Bearer
+  parameters:
+    ApiTokenQuery:
+      name: apiToken
+      in: query
+      description: Token d'API alternatif lorsque Authorization n'est pas fourni
+      required: false
+      schema:
+        type: string
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - pseudo
+        - mail
+        - password
+        - passwordConfirm
+      properties:
+        pseudo:
+          type: string
+          example: user123
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+        passwordConfirm:
+          type: string
+          format: password
+          example: password123
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        apiToken:
+          type: string
+          example: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+    LoginRequest:
+      type: object
+      required:
+        - mail
+        - password
+      properties:
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+    LoginResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        apiToken:
+          type: string
+          example: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+    MeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        pseudo:
+          type: string
+          example: user123
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+    CreateCardRequest:
+      type: object
+      required:
+        - name
+        - extension
+        - number
+        - gameTypeId
+      properties:
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        gameTypeId:
+          type: integer
+          example: 1
+    CardResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        gameType:
+          $ref: '#/components/schemas/GameTypeSummary'
+    GameTypeSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nom:
+          type: string
+          example: Pokemon
+    SetSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Deck jaune
+        color:
+          type: string
+          example: "#FFEA00"
+        gameType:
+          $ref: '#/components/schemas/GameTypeSummary'
+    CreateSetRequest:
+      type: object
+      required:
+        - name
+        - gameTypeId
+      properties:
+        name:
+          type: string
+          example: Set A
+        gameTypeId:
+          type: integer
+          example: 1
+        color:
+          type: string
+          description: Couleur hexadécimale (#RRGGBB)
+          example: "#FFFFFF"
+    AddCardToSetRequest:
+      type: object
+      required:
+        - cardId
+      properties:
+        cardId:
+          type: integer
+          example: 10
+    LibraryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetSummary'
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        perPage:
+          type: integer
+          example: 25
+        total:
+          type: integer
+          example: 100
+        pages:
+          type: integer
+          example: 4
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Missing fields
