@@ -42,7 +42,7 @@ class DocsController extends AbstractController
   <script>
     window.onload = function() {
       const ui = SwaggerUIBundle({
-        url: '/api/docs/openapi.yaml',
+        url: '/api/docs/openapi',
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -64,7 +64,8 @@ HTML;
         return new Response($html);
     }
 
-    #[Route('/openapi.yaml', name: 'api_docs_openapi', methods: ['GET'])]
+    #[Route('/openapi', name: 'api_docs_openapi', methods: ['GET'])]
+    #[Route('/openapi.yaml', name: 'api_docs_openapi_yaml', methods: ['GET'])]
     public function openApiFile(): Response
     {
         $projectDir = dirname(__DIR__, 3);
