@@ -29,6 +29,14 @@ php -S 127.0.0.1:8000 -t public
   - Payload JSON: { "mail": "enzo@example.com", "password": "secret" }
   - Réponse: 200 OK { "id": <id>, "apiToken": "..." }
 
+- POST /api/logout
+  - Header: `Authorization: Bearer <apiToken>` (ou body `apiToken`)
+  - Réponse: 200 OK { "success": true }
+
+- GET /api/me
+  - Header: `Authorization: Bearer <apiToken>` (ou query `?apiToken=...`)
+  - Réponse: 200 OK { "id": ..., "pseudo": "...", "mail": "..." }
+
 5) Tester avec Postman
 - Créez une requête POST vers `http://127.0.0.1:8000/api/register` avec header `Content-Type: application/json` et le JSON de l'exemple.
 - Ensuite, POST vers `http://127.0.0.1:8000/api/login` pour récupérer un `apiToken`.
