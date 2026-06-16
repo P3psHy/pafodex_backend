@@ -43,6 +43,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private Library $library;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -138,7 +141,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $data = (array) $this;
         $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password);
-        
+
         return $data;
     }
 
@@ -147,4 +150,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // @deprecated, to be removed when upgrading to Symfony 8
     }
+
+    public function getLibrary(): Library
+    {
+        return $this->library;
+    }
+
+    public function setLibrary(Library $library): static
+    {
+        // set the owning side of the relation if necessary
+        if ($library->getUser() !== $this) {
+            $library->setUser($this);
+        }
+
+        $this->library = $library;
+
+        return $this;
+    }
+
+
 }
