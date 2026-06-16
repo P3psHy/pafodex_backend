@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Entity\Library;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -53,6 +54,11 @@ class AuthController extends AbstractController
         $user->setPassword($hashed);
         // generate simple API token
         $user->setApiToken(bin2hex(random_bytes(32)));
+
+        // create and link a Library for this user
+        $library = new Library();
+        $library->setUser($user);
+        $user->setLibrary($library);
 
         $this->em->persist($user);
         $this->em->flush();
