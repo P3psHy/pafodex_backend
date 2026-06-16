@@ -9,7 +9,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_MAIL', fields: ['mail'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -17,14 +17,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180)]
-    private ?string $email = null;
+    #[ORM\Column(length: 50)]
+    private ?string $pseudo = null;
+
+    #[ORM\Column(length: 50)]
+    private ?string $mail = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $apiToken = null;
 
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
     private array $roles = [];
+
+    public function __construct()
+    {
+        $this->roles = ['ROLE_USER'];
+    }
 
     /**
      * @var string The hashed password
@@ -37,14 +48,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->id;
     }
 
-    public function getEmail(): ?string
+    public function getPseudo(): ?string
     {
-        return $this->email;
+        return $this->pseudo;
     }
 
-    public function setEmail(string $email): static
+    public function setPseudo(string $pseudo): static
     {
-        $this->email = $email;
+        $this->pseudo = $pseudo;
+
+        return $this;
+    }
+
+    public function getMail(): ?string
+    {
+        return $this->mail;
+    }
+
+    public function setMail(string $mail): static
+    {
+        $this->mail = $mail;
 
         return $this;
     }
@@ -56,7 +79,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->email;
+        return (string) $this->mail;
     }
 
     /**
@@ -92,6 +115,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
+
+        return $this;
+    }
+
+    public function getApiToken(): ?string
+    {
+        return $this->apiToken;
+    }
+
+    public function setApiToken(?string $apiToken): static
+    {
+        $this->apiToken = $apiToken;
 
         return $this;
     }
