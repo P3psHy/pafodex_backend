@@ -92,4 +92,55 @@ class AuthController extends AbstractController
 
         return $this->json(['id' => $user->getId(), 'apiToken' => $user->getApiToken()]);
     }
+
+    private function extractBearerToken(Request $request): ?string
+    {
+        $auth = $request->headers->get('Authorization');
+        if (!$auth) {
+            return null;
+        }
+        if (0 === stripos($auth, 'Bearer ')) {
+            return substr($auth, 7);
+        }
+        return null;
+    }
+
+    #[Route('/logout', name: 'api_logout', methods: ['POST'])]
+    public function logout(Request $request): JsonResponse
+    {
+        $token = $this->extractBearerToken($request) ?? $request->get('apiToken');
+        if (!$token) {
+            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
+        if (!$user) {
+            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user->setApiToken(null);
+        $this->em->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/me', name: 'api_me', methods: ['GET'])]
+    public function me(Request $request): JsonResponse
+    {
+        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
+        if (!$token) {
+            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
+        if (!$user) {
+            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->json([
+            'id' => $user->getId(),
+            'pseudo' => $user->getPseudo(),
+            'mail' => $user->getMail(),
+        ]);
+    }
 }
