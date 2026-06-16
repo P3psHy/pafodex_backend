@@ -6,8 +6,8 @@ info:
     Documentation Swagger de l'API Pafodex.
     Les endpoints exposés sont détaillés avec les payloads, paramètres, réponses et pagination.
 servers:
-  - url: http://localhost:8000
-    description: Serveur local
+  - url: https://pafodex-backend.onrender.com
+    description: Serveur
 paths:
   /api/register:
     post:
@@ -147,6 +147,99 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gametype:
+    get:
+      tags:
+        - GameType
+      summary: Lister tous les types de jeu
+      responses:
+        '200':
+          description: Liste des types de jeu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GameTypeResponse'
+    post:
+      tags:
+        - GameType
+      summary: Créer un nouveau type de jeu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameTypeRequest'
+      responses:
+        '201':
+          description: GameType créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameTypeResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/gametype/{id}:
+    get:
+      tags:
+        - GameType
+      summary: Récupérer un type de jeu par ID
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant du type de jeu
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détails du type de jeu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameTypeResponse'
+        '404':
+          description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - GameType
+      summary: Supprimer un type de jeu par ID
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant du type de jeu
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Suppression réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Game type deleted successfully
         '404':
           description: GameType introuvable
           content:
@@ -534,6 +627,23 @@ components:
           type: string
           description: Couleur hexadécimale (#RRGGBB)
           example: "#FFFFFF"
+    CreateGameTypeRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Pokemon
+    GameTypeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Pokemon
     AddCardToSetRequest:
       type: object
       required:
