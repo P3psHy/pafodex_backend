@@ -1,6 +1,5 @@
 FROM php:8.3-cli
 
-# Dépendances système
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -11,20 +10,16 @@ RUN apt-get update && apt-get install -y \
     pdo_pgsql \
     zip
 
-# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Dossier de travail
 WORKDIR /app
 
-# Copier le projet
 COPY . .
 
-# Installer dépendances SANS scripts (important sur Render)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Exposer le port Render
+RUN php bin/console cache:clear --env=prod
+
 EXPOSE 10000
 
-# Lancer Symfony
-CMD php -S 0.0.0.0:${PORT:-10000} -t public
+CMD php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:${PORT:-10000} -t public
