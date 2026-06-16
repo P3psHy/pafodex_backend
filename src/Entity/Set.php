@@ -20,6 +20,10 @@ class Set
     #[ORM\JoinColumn(nullable: false)]
     private ?Library $library = null;
 
+    #[ORM\ManyToOne(inversedBy: 'set')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?GameType $gameType = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -45,6 +49,18 @@ class Set
     public function setLibrary(?Library $library): static
     {
         $this->library = $library;
+
+        return $this;
+    }
+
+    public function getGameType(): ?GameType
+    {
+        return $this->gameType;
+    }
+
+    public function setGameType(?GameType $gameType): static
+    {
+        $this->gameType = $gameType;
 
         return $this;
     }
