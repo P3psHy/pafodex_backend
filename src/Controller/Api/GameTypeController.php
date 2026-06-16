@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Api;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +22,7 @@ class GameTypeController extends AbstractController
         $this->em = $em;
     }
 
-    #[Route('/gametype', name: 'app_game_type_index', methods: ['GET'])]
+    #[Route('/gametype', name: 'api_game_type_index', methods: ['GET'])]
     public function index(): JsonResponse
     {
         return $this->json([
@@ -31,7 +31,7 @@ class GameTypeController extends AbstractController
         ]);
     }
 
-    #[Route('/gametype', name: 'app_game_type_create', methods: ['POST'])]
+    #[Route('/gametype', name: 'api_game_type_create', methods: ['POST'])]
     public function createGameType(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -53,8 +53,22 @@ class GameTypeController extends AbstractController
         ], Response::HTTP_CREATED);
     }
 
-    #[Route('/gametype/{id}', name: 'app_game_type_show', methods: ['GET'])]
+    #[Route('/gametype/{id}', name: 'api_game_type_show', methods: ['GET'])]
     public function getOneGameType(int $id): JsonResponse
+    {
+        $gameType = $this->em->getRepository(GameType::class)->find($id);
+        if (!$gameType) {
+            return $this->json(['error' => 'Game type not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'id' => $gameType->getId(),
+            'name' => $gameType->getName(),
+        ]);
+    }
+
+    #[Route('/gametype/{id}', name: 'api_game_type_delete', methods: ['DELETE'])]
+    public function deleteGameType(int $id): JsonResponse
     {
         $gameType = $this->em->getRepository(GameType::class)->find($id);
 
@@ -62,6 +76,10 @@ class GameTypeController extends AbstractController
             return $this->json(['error' => 'Game type not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->json($gameType);
+        $this->em->remove($gameType);
+        $this->em->flush();
+
+        return $this->json(['message' => 'Game type deleted successfully']);
     }
+
 }
