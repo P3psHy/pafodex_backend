@@ -9,7 +9,7 @@ security:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: email
+                property: mail        
 
     firewalls:
         dev:
@@ -18,6 +18,11 @@ security:
             security: false
         main:
             lazy: true
+            provider: app_user_provider
+
+        api:
+            pattern: ^/api
+            stateless: true
             provider: app_user_provider
 
             # Activate different ways to authenticate:
