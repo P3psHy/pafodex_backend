@@ -18,6 +18,9 @@ class Set
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
+    #[ORM\Column(length: 7, nullable: false)]
+    private ?string $color = '#FFFFFF';
+
     #[ORM\ManyToOne(inversedBy: 'sets')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Library $library = null;
@@ -51,6 +54,18 @@ class Set
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getColor(): ?string
+    {
+        return $this->color;
+    }
+
+    public function setColor(string $color): static
+    {
+        $this->color = $color;
 
         return $this;
     }

@@ -26,13 +26,14 @@ class CardController extends AbstractController
     public function createCard(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        $nom = $data['nom'] ?? null;
+        $name = $data['name'] ?? null;
         $extension = $data['extension'] ?? null;
-        $numero = $data['numero'] ?? null;
+        $number = $data['number'] ?? null;
+        $image = $data['image'] ?? null;
         $gameTypeId = $data['gameTypeId'] ?? null;
 
-        if (!$nom || !$extension || !$numero || !$gameTypeId) {
-            return $this->json(['error' => 'Missing fields: nom, extension, numero and gameTypeId required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$extension || !$number || !$gameTypeId) {
+            return $this->json(['error' => 'Missing fields: name, extension, number and gameTypeId required'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
@@ -41,9 +42,10 @@ class CardController extends AbstractController
         }
 
         $card = new Card();
-        $card->setNom($nom);
+        $card->setName($name);
         $card->setExtension($extension);
-        $card->setNumero($numero);
+        $card->setNumber($number);
+        $card->setImage($image);
         $card->setGameType($gameType);
 
         $this->em->persist($card);
@@ -51,9 +53,10 @@ class CardController extends AbstractController
 
         return $this->json([
             'id' => $card->getId(),
-            'nom' => $card->getNom(),
+            'name' => $card->getName(),
             'extension' => $card->getExtension(),
-            'numero' => $card->getNumero(),
+            'number' => $card->getNumber(),
+            'image' => $card->getImage(),
             'gameType' => [
                 'id' => $gameType->getId(),
                 'nom' => $gameType->getName(),

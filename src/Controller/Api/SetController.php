@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Entity\Set as GameSet;
 use App\Entity\GameType;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -58,6 +59,7 @@ class SetController extends AbstractController
             $sets[] = [
                 'id' => $set->getId(),
                 'name' => $set->getName(),
+                'color' => $set->getColor(),
                 'gameType' => [
                     'id' => $set->getGameType()->getId(),
                     'nom' => $set->getGameType()->getName(),
@@ -89,9 +91,14 @@ class SetController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $name = $data['name'] ?? null;
         $gameTypeId = $data['gameTypeId'] ?? null;
+        $color = $data['color'] ?? '#FFFFFF';
 
         if (!$name || !$gameTypeId) {
             return $this->json(['error' => 'Missing fields: name and gameTypeId required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+            return $this->json(['error' => 'Invalid color format, expected hex like #RRGGBB'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
@@ -101,6 +108,7 @@ class SetController extends AbstractController
 
         $set = new GameSet();
         $set->setName($name);
+        $set->setColor($color);
         $set->setLibrary($library);
         $set->setGameType($gameType);
 
@@ -110,6 +118,7 @@ class SetController extends AbstractController
         return $this->json([
             'id' => $set->getId(),
             'name' => $set->getName(),
+            'color' => $set->getColor(),
             'gameType' => [
                 'id' => $gameType->getId(),
                 'nom' => $gameType->getName(),
@@ -140,13 +149,30 @@ class SetController extends AbstractController
             return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = 25;
+
+        $query = $this->em->getRepository(Card::class)->createQueryBuilder('c')
+            ->join('c.sets', 's')
+            ->where('s.id = :setId')
+            ->setParameter('setId', $setId)
+            ->orderBy('c.id', 'ASC')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery();
+
+        $paginator = new Paginator($query, true);
+        $total = count($paginator);
+        $pages = (int) ceil($total / $limit);
+
         $cards = [];
-        foreach ($set->getCards() as $card) {
+        foreach ($paginator as $card) {
             $cards[] = [
                 'id' => $card->getId(),
-                'nom' => $card->getNom(),
+                'name' => $card->getName(),
                 'extension' => $card->getExtension(),
-                'numero' => $card->getNumero(),
+                'number' => $card->getNumber(),
+                'image' => $card->getImage(),
                 'gameType' => [
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
@@ -154,7 +180,15 @@ class SetController extends AbstractController
             ];
         }
 
-        return $this->json(['cards' => $cards]);
+        return $this->json([
+            'cards' => $cards,
+            'pagination' => [
+                'page' => $page,
+                'perPage' => $limit,
+                'total' => $total,
+                'pages' => $pages,
+            ],
+        ]);
     }
 
     #[Route('/me/sets/{setId}/card', name: 'api_me_set_add_card', methods: ['POST'])]
@@ -200,9 +234,10 @@ class SetController extends AbstractController
 
         return $this->json([
             'id' => $card->getId(),
-            'nom' => $card->getNom(),
+            'name' => $card->getName(),
             'extension' => $card->getExtension(),
-            'numero' => $card->getNumero(),
+            'number' => $card->getNumber(),
+            'image' => $card->getImage(),
             'gameType' => [
                 'id' => $card->getGameType()->getId(),
                 'nom' => $card->getGameType()->getName(),

@@ -30,8 +30,8 @@ final class Version20260616120050 extends AbstractMigration
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE set_card DROP CONSTRAINT FK_83D37A5A10FB0D18');
-        $this->addSql('ALTER TABLE set_card DROP CONSTRAINT FK_83D37A5A4ACC9A20');
-        $this->addSql('DROP TABLE set_card');
+        $this->addSql('ALTER TABLE set_card DROP CONSTRAINT IF EXISTS FK_83D37A5A10FB0D18');
+        $this->addSql('ALTER TABLE set_card DROP CONSTRAINT IF EXISTS FK_83D37A5A4ACC9A20');
+        $this->addSql('DROP TABLE IF EXISTS set_card');
     }
 }
