@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Card;
 use App\Repository\GameTypeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -24,9 +25,16 @@ class GameType
     #[ORM\OneToMany(targetEntity: Set::class, mappedBy: 'gameType')]
     private Collection $set;
 
+    /**
+     * @var Collection<int, Card>
+     */
+    #[ORM\OneToMany(targetEntity: Card::class, mappedBy: 'gameType', orphanRemoval: true)]
+    private Collection $cards;
+
     public function __construct()
     {
         $this->set = new ArrayCollection();
+        $this->cards = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -70,6 +78,35 @@ class GameType
             // set the owning side to null (unless already changed)
             if ($set->getGameType() === $this) {
                 $set->setGameType(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Card>
+     */
+    public function getCards(): Collection
+    {
+        return $this->cards;
+    }
+
+    public function addCard(Card $card): static
+    {
+        if (!$this->cards->contains($card)) {
+            $this->cards->add($card);
+            $card->setGameType($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCard(Card $card): static
+    {
+        if ($this->cards->removeElement($card)) {
+            if ($card->getGameType() === $this) {
+                $card->setGameType(null);
             }
         }
 

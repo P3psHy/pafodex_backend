@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\SetRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: SetRepository::class)]
@@ -23,6 +25,18 @@ class Set
     #[ORM\ManyToOne(inversedBy: 'set')]
     #[ORM\JoinColumn(nullable: false)]
     private ?GameType $gameType = null;
+
+    /**
+     * @var Collection<int, Card>
+     */
+    #[ORM\ManyToMany(targetEntity: Card::class, inversedBy: 'sets')]
+    #[ORM\JoinTable(name: 'set_card')]
+    private Collection $cards;
+
+    public function __construct()
+    {
+        $this->cards = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -61,6 +75,33 @@ class Set
     public function setGameType(?GameType $gameType): static
     {
         $this->gameType = $gameType;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Card>
+     */
+    public function getCards(): Collection
+    {
+        return $this->cards;
+    }
+
+    public function addCard(Card $card): static
+    {
+        if (!$this->cards->contains($card)) {
+            $this->cards->add($card);
+            $card->addSet($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCard(Card $card): static
+    {
+        if ($this->cards->removeElement($card)) {
+            $card->removeSet($this);
+        }
 
         return $this;
     }
