@@ -596,6 +596,177 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/me/library/cards:
+    post:
+      tags:
+        - Library
+      summary: Ajouter une carte existante à la bibliothèque connectée
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCardToLibraryRequest'
+      responses:
+        '201':
+          description: Carte ajoutée à la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryCardResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque ou carte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Carte déjà présente dans la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/library/cards/{cardId}:
+    get:
+      tags:
+        - Library
+      summary: Récupérer une carte de la bibliothèque connectée
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: cardId
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Carte de la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryCardResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque introuvable ou carte absente de la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Library
+      summary: Mettre à jour une carte de la bibliothèque connectée (favorite)
+      description: |
+        Met à jour les métadonnées de possession: numberCard et isFavorite.
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: cardId
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLibraryCardRequest'
+      responses:
+        '200':
+          description: Carte de bibliothèque mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryCardResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque introuvable ou carte absente de la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Library
+      summary: Retirer une carte de la bibliothèque connectée
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: cardId
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Carte retirée de la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque introuvable ou carte absente de la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/me/sets:
     get:
       tags:
@@ -1082,6 +1253,14 @@ components:
           example: https://example.com/image.png
         gameType:
           $ref: '#/components/schemas/GameTypeSummary'
+        numberCard:
+          type: integer
+          description: Nombre d'exemplaires dans la bibliothèque de l'utilisateur (présent uniquement si authentifié et carte possédée)
+          example: 3
+        isFavorite:
+          type: boolean
+          description: Indique si la carte est en favori dans la bibliothèque (présent uniquement si authentifié et carte possédée)
+          example: true
     CardsListResponse:
       type: object
       properties:
@@ -1168,6 +1347,33 @@ components:
         cardId:
           type: integer
           example: 10
+    AddCardToLibraryRequest:
+      type: object
+      required:
+        - cardId
+      properties:
+        cardId:
+          type: integer
+          example: 10
+        numberCard:
+          type: integer
+          minimum: 0
+          default: 1
+          example: 2
+        isFavorite:
+          type: boolean
+          default: false
+          example: true
+    UpdateLibraryCardRequest:
+      type: object
+      properties:
+        numberCard:
+          type: integer
+          minimum: 0
+          example: 3
+        isFavorite:
+          type: boolean
+          example: true
     AddUserCardRequest:
       type: object
       required:
@@ -1197,6 +1403,15 @@ components:
         libraryId:
           type: integer
           example: 1
+        numberCard:
+          type: integer
+          minimum: 0
+          default: 1
+          example: 2
+        isFavorite:
+          type: boolean
+          default: false
+          example: true
     AddUserCardResponse:
       type: object
       properties:
@@ -1220,6 +1435,40 @@ components:
         uuid:
           type: string
           example: pikachu_001_base
+        numberCard:
+          type: integer
+          example: 2
+        isFavorite:
+          type: boolean
+          example: true
+        gameType:
+          $ref: '#/components/schemas/GameTypeSummary'
+    LibraryCardResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        numberCard:
+          type: integer
+          example: 2
+        isFavorite:
+          type: boolean
+          example: true
         gameType:
           $ref: '#/components/schemas/GameTypeSummary'
     MessageResponse:
@@ -1244,7 +1493,7 @@ components:
         cards:
           type: array
           items:
-            $ref: '#/components/schemas/CardResponse'
+            $ref: '#/components/schemas/LibraryCardResponse'
         pagination:
           $ref: '#/components/schemas/Pagination'
     LibrarySearchResponse:
@@ -1260,7 +1509,7 @@ components:
         cards:
           type: array
           items:
-            $ref: '#/components/schemas/CardResponse'
+            $ref: '#/components/schemas/LibraryCardResponse'
     Pagination:
       type: object
       properties:
