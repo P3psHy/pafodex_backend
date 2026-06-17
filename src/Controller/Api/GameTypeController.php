@@ -25,10 +25,17 @@ class GameTypeController extends AbstractController
     #[Route('/gametype', name: 'api_game_type_index', methods: ['GET'])]
     public function index(): JsonResponse
     {
-        return $this->json([
-            'message' => 'Welcome to your new controller!',
-            'path' => 'src/Controller/GameTypeController.php',
-        ]);
+        $gameTypes = $this->em->getRepository(GameType::class)->findBy([], ['id' => 'ASC']);
+        $data = [];
+
+        foreach ($gameTypes as $gameType) {
+            $data[] = [
+                'id' => $gameType->getId(),
+                'name' => $gameType->getName(),
+            ];
+        }
+
+        return $this->json(['data' => $data]);
     }
 
     #[Route('/gametype', name: 'api_game_type_create', methods: ['POST'])]
@@ -60,6 +67,30 @@ class GameTypeController extends AbstractController
         if (!$gameType) {
             return $this->json(['error' => 'Game type not found'], Response::HTTP_NOT_FOUND);
         }
+
+        return $this->json([
+            'id' => $gameType->getId(),
+            'name' => $gameType->getName(),
+        ]);
+    }
+
+    #[Route('/gametype/{id}', name: 'api_game_type_update', methods: ['PUT'])]
+    public function updateGameType(Request $request, int $id): JsonResponse
+    {
+        $gameType = $this->em->getRepository(GameType::class)->find($id);
+        if (!$gameType) {
+            return $this->json(['error' => 'Game type not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $name = $data['name'] ?? null;
+
+        if (!$name) {
+            return $this->json(['error' => 'Missing field: name required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $gameType->setName($name);
+        $this->em->flush();
 
         return $this->json([
             'id' => $gameType->getId(),

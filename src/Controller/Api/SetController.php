@@ -36,6 +36,34 @@ class SetController extends AbstractController
         return null;
     }
 
+    private function getAuthenticatedUser(Request $request): User|JsonResponse
+    {
+        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
+        if (!$token) {
+            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
+        if (!$user) {
+            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $user;
+    }
+
+    private function setToArray(GameSet $set): array
+    {
+        return [
+            'id' => $set->getId(),
+            'name' => $set->getName(),
+            'color' => $set->getColor(),
+            'gameType' => [
+                'id' => $set->getGameType()->getId(),
+                'nom' => $set->getGameType()->getName(),
+            ],
+        ];
+    }
+
     #[Route('/me/sets', name: 'api_me_sets', methods: ['GET'])]
     public function listSets(Request $request): JsonResponse
     {
@@ -191,6 +219,91 @@ class SetController extends AbstractController
         ]);
     }
 
+    #[Route('/me/sets/{setId}', name: 'api_me_set_update', methods: ['PUT'])]
+    public function updateSet(Request $request, int $setId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $set = $this->em->getRepository(GameSet::class)->find($setId);
+        if (!$set) {
+            return $this->json(['error' => 'Set not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $library = $user->getLibrary();
+        if (!$library || $set->getLibrary()->getId() !== $library->getId()) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (array_key_exists('name', $data)) {
+            if (!$data['name']) {
+                return $this->json(['error' => 'Name cannot be empty'], Response::HTTP_BAD_REQUEST);
+            }
+            $set->setName($data['name']);
+        }
+
+        if (array_key_exists('color', $data)) {
+            if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $data['color'])) {
+                return $this->json(['error' => 'Invalid color format, expected hex like #RRGGBB'], Response::HTTP_BAD_REQUEST);
+            }
+            $set->setColor($data['color']);
+        }
+
+        if (array_key_exists('gameTypeId', $data)) {
+            $gameType = $this->em->getRepository(GameType::class)->find($data['gameTypeId']);
+            if (!$gameType) {
+                return $this->json(['error' => 'GameType not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            foreach ($set->getCards() as $card) {
+                if ($card->getGameType()->getId() !== $gameType->getId()) {
+                    return $this->json(['error' => 'Cannot change gameType while set contains cards from another gameType'], Response::HTTP_BAD_REQUEST);
+                }
+            }
+
+            $set->setGameType($gameType);
+        }
+
+        $this->em->flush();
+
+        return $this->json($this->setToArray($set));
+    }
+
+    #[Route('/me/sets/{setId}', name: 'api_me_set_delete', methods: ['DELETE'])]
+    public function deleteSet(Request $request, int $setId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $set = $this->em->getRepository(GameSet::class)->find($setId);
+        if (!$set) {
+            return $this->json(['error' => 'Set not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $library = $user->getLibrary();
+        if (!$library || $set->getLibrary()->getId() !== $library->getId()) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        foreach ($set->getCards() as $card) {
+            $set->removeCard($card);
+        }
+
+        $this->em->remove($set);
+        $this->em->flush();
+
+        return $this->json(['message' => 'Set deleted successfully']);
+    }
+
     #[Route('/me/sets/{setId}/card', name: 'api_me_set_add_card', methods: ['POST'])]
     public function addCardToSet(Request $request, int $setId): JsonResponse
     {
@@ -243,5 +356,38 @@ class SetController extends AbstractController
                 'nom' => $card->getGameType()->getName(),
             ],
         ], Response::HTTP_OK);
+    }
+
+    #[Route('/me/sets/{setId}/card/{cardId}', name: 'api_me_set_remove_card', methods: ['DELETE'])]
+    public function removeCardFromSet(Request $request, int $setId, int $cardId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $set = $this->em->getRepository(GameSet::class)->find($setId);
+        if (!$set) {
+            return $this->json(['error' => 'Set not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $library = $user->getLibrary();
+        if (!$library || $set->getLibrary()->getId() !== $library->getId()) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $card = $this->em->getRepository(Card::class)->find($cardId);
+        if (!$card) {
+            return $this->json(['error' => 'Card not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!$set->getCards()->contains($card)) {
+            return $this->json(['error' => 'Card is not in this set'], Response::HTTP_NOT_FOUND);
+        }
+
+        $set->removeCard($card);
+        $this->em->flush();
+
+        return $this->json(['message' => 'Card removed from set successfully']);
     }
 }

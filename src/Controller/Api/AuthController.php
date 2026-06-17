@@ -105,6 +105,30 @@ class AuthController extends AbstractController
         return null;
     }
 
+    private function getAuthenticatedUser(Request $request): User|JsonResponse
+    {
+        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
+        if (!$token) {
+            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
+        if (!$user) {
+            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $user;
+    }
+
+    private function userToArray(User $user): array
+    {
+        return [
+            'id' => $user->getId(),
+            'pseudo' => $user->getPseudo(),
+            'mail' => $user->getMail(),
+        ];
+    }
+
     #[Route('/logout', name: 'api_logout', methods: ['POST'])]
     public function logout(Request $request): JsonResponse
     {
@@ -127,20 +151,78 @@ class AuthController extends AbstractController
     #[Route('/me', name: 'api_me', methods: ['GET'])]
     public function me(Request $request): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        return $this->json($this->userToArray($user));
+    }
+
+    #[Route('/me', name: 'api_me_update', methods: ['PUT'])]
+    public function updateMe(Request $request): JsonResponse
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
-        return $this->json([
-            'id' => $user->getId(),
-            'pseudo' => $user->getPseudo(),
-            'mail' => $user->getMail(),
-        ]);
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (array_key_exists('pseudo', $data)) {
+            if (!$data['pseudo']) {
+                return $this->json(['error' => 'Pseudo cannot be empty'], Response::HTTP_BAD_REQUEST);
+            }
+            $user->setPseudo($data['pseudo']);
+        }
+
+        if (array_key_exists('mail', $data)) {
+            if (!$data['mail']) {
+                return $this->json(['error' => 'Mail cannot be empty'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $existing = $this->em->getRepository(User::class)->findOneBy(['mail' => $data['mail']]);
+            if ($existing && $existing->getId() !== $user->getId()) {
+                return $this->json(['error' => 'Email already used'], Response::HTTP_CONFLICT);
+            }
+
+            $user->setMail($data['mail']);
+        }
+
+        if (array_key_exists('password', $data) || array_key_exists('passwordConfirm', $data)) {
+            $password = $data['password'] ?? null;
+            $passwordConfirm = $data['passwordConfirm'] ?? null;
+
+            if (!$password || !$passwordConfirm) {
+                return $this->json(['error' => 'Missing fields: password and passwordConfirm required'], Response::HTTP_BAD_REQUEST);
+            }
+
+            if ($password !== $passwordConfirm) {
+                return $this->json(['error' => 'Passwords do not match'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $user->setPassword($this->hasher->hashPassword($user, $password));
+        }
+
+        $this->em->flush();
+
+        return $this->json($this->userToArray($user));
+    }
+
+    #[Route('/me', name: 'api_me_delete', methods: ['DELETE'])]
+    public function deleteMe(Request $request): JsonResponse
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $this->em->remove($user);
+        $this->em->flush();
+
+        return $this->json(['message' => 'User deleted successfully']);
     }
 }

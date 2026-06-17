@@ -1,4 +1,4 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Pafodex Backend API
   version: 1.0.0
@@ -125,7 +125,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Auth
+      summary: Mettre à jour l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: Utilisateur mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Auth
+      summary: Supprimer l'utilisateur connecté
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/cards:
+    get:
+      tags:
+        - Cards
+      summary: Lister les cartes
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre de cartes par page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Liste paginée des cartes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardsListResponse'
     post:
       tags:
         - Cards
@@ -151,6 +246,91 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/card/{id}:
+    get:
+      tags:
+        - Cards
+      summary: Récupérer une carte par ID
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détails de la carte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '404':
+          description: Carte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Cards
+      summary: Mettre à jour une carte
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCardRequest'
+      responses:
+        '200':
+          description: Carte mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carte ou GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Cards
+      summary: Supprimer une carte
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Suppression réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          description: Carte introuvable
           content:
             application/json:
               schema:
@@ -220,6 +400,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - GameType
+      summary: Mettre à jour un type de jeu
+      parameters:
+        - name: id
+          in: path
+          description: Identifiant du type de jeu
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameTypeRequest'
+      responses:
+        '200':
+          description: GameType mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameTypeResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - GameType
@@ -237,11 +453,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Game type deleted successfully
+                $ref: '#/components/schemas/MessageResponse'
         '404':
           description: GameType introuvable
           content:
@@ -459,6 +671,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Sets
+      summary: Mettre à jour un set
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: setId
+          in: path
+          description: Identifiant du set
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSetRequest'
+      responses:
+        '200':
+          description: Set mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetSummary'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Set ou GameType introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Sets
+      summary: Supprimer un set
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: setId
+          in: path
+          description: Identifiant du set
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Suppression réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Set introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/me/sets/{setId}/card:
     post:
       tags:
@@ -496,6 +804,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé au set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Set ou carte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/me/sets/{setId}/card/{cardId}:
+    delete:
+      tags:
+        - Sets
+      summary: Retirer une carte d'un set
+      description: |
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: setId
+          in: path
+          description: Identifiant du set
+          required: true
+          schema:
+            type: integer
+        - name: cardId
+          in: path
+          description: Identifiant de la carte
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Carte retirée du set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         '401':
           description: Token manquant ou invalide
           content:
@@ -597,6 +954,24 @@ components:
           type: string
           format: email
           example: user@example.com
+    UpdateMeRequest:
+      type: object
+      properties:
+        pseudo:
+          type: string
+          example: user123
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: newPassword123
+        passwordConfirm:
+          type: string
+          format: password
+          example: newPassword123
     CreateCardRequest:
       type: object
       required:
@@ -604,6 +979,26 @@ components:
         - extension
         - number
         - gameTypeId
+      properties:
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        gameTypeId:
+          type: integer
+          example: 1
+    UpdateCardRequest:
+      type: object
       properties:
         name:
           type: string
@@ -644,6 +1039,15 @@ components:
           example: https://example.com/image.png
         gameType:
           $ref: '#/components/schemas/GameTypeSummary'
+    CardsListResponse:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
     GameTypeSummary:
       type: object
       properties:
@@ -683,6 +1087,19 @@ components:
           type: string
           description: Couleur hexadécimale (#RRGGBB)
           example: "#FFFFFF"
+    UpdateSetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Set A
+        gameTypeId:
+          type: integer
+          example: 1
+        color:
+          type: string
+          description: Couleur hexadécimale (#RRGGBB)
+          example: "#FFFFFF"
     CreateGameTypeRequest:
       type: object
       required:
@@ -708,6 +1125,12 @@ components:
         cardId:
           type: integer
           example: 10
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Operation completed successfully
     LibraryResponse:
       type: object
       properties:
