@@ -10,11 +10,14 @@ use Doctrine\ORM\Mapping as ORM;
 class LibraryCard
 {
     #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'bigint')]
+    private ?int $id = null;
+
     #[ORM\ManyToOne(inversedBy: 'libraryCards')]
     #[ORM\JoinColumn(name: 'card_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?Card $card = null;
 
-    #[ORM\Id]
     #[ORM\ManyToOne(inversedBy: 'libraryCards')]
     #[ORM\JoinColumn(name: 'library_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?Library $library = null;
@@ -24,6 +27,11 @@ class LibraryCard
 
     #[ORM\Column(name: 'is_favorite', options: ['default' => false])]
     private bool $isFavorite = false;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
     public function getCard(): ?Card
     {
