@@ -60,6 +60,7 @@ class SetController extends AbstractController
             'gameType' => [
                 'id' => $set->getGameType()->getId(),
                 'nom' => $set->getGameType()->getName(),
+                'abbreviated' => $set->getGameType()->getAbbreviated()
             ],
         ];
     }
@@ -91,6 +92,7 @@ class SetController extends AbstractController
                 'gameType' => [
                     'id' => $set->getGameType()->getId(),
                     'nom' => $set->getGameType()->getName(),
+                    'abbreviated' => $set->getGameType()->getAbbreviated()
                 ],
             ];
         }
@@ -150,6 +152,7 @@ class SetController extends AbstractController
             'gameType' => [
                 'id' => $gameType->getId(),
                 'nom' => $gameType->getName(),
+                'abbreviated' => $set->getGameType()->getAbbreviated()
             ],
         ], Response::HTTP_CREATED);
     }
@@ -204,6 +207,7 @@ class SetController extends AbstractController
                 'gameType' => [
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
+                    'abbreviated' => $card->getGameType()->getAbbreviated(),
                 ],
             ];
         }
@@ -354,6 +358,7 @@ class SetController extends AbstractController
             'gameType' => [
                 'id' => $card->getGameType()->getId(),
                 'nom' => $card->getGameType()->getName(),
+                'abbreviated' => $card->getGameType()->getAbbreviated(),
             ],
         ], Response::HTTP_OK);
     }
