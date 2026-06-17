@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\Card;
+use App\Entity\LibraryCard;
 use App\Entity\Library;
 
 use App\Entity\GameType;
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\User;
 
 #[Route('/api')]
 class CardController extends AbstractController
@@ -24,21 +26,28 @@ class CardController extends AbstractController
         $this->em = $em;
     }
 
-    private function cardToArray(Card $card): array
+    private function cardToArray(Card $card, ?LibraryCard $libraryCard = null): array
     {
-        return [
-            'id' => $card->getId(),
-            'name' => $card->getName(),
+        $data = [
+            'id'        => $card->getId(),
+            'name'      => $card->getName(),
             'extension' => $card->getExtension(),
-            'number' => $card->getNumber(),
-            'image' => $card->getImage(),
-            'gameType' => [
-                'id' => $card->getGameType()->getId(),
+            'number'    => $card->getNumber(),
+            'image'     => $card->getImage(),
+            'gameType'  => [
+                'id'  => $card->getGameType()->getId(),
                 'nom' => $card->getGameType()->getName(),
                 'abbreviated' => $card->getGameType()->getAbbreviated(),
                 'url' => $card->getGameType()->getUrl(),
             ],
         ];
+
+        if ($libraryCard !== null) {
+            $data['numberCard'] = $libraryCard->getNumberCard();
+            $data['isFavorite'] = $libraryCard->isFavorite();
+        }
+
+        return $data;
     }
 
     // CRUD
@@ -46,7 +55,7 @@ class CardController extends AbstractController
     #[Route('/cards', name: 'api_cards_list', methods: ['GET'])]
     public function listCards(Request $request): JsonResponse
     {
-        $page = max(1, (int) $request->query->get('page', 1));
+        $page  = max(1, (int) $request->query->get('page', 1));
         $limit = min(100, max(1, (int) $request->query->get('limit', 25)));
 
         $query = $this->em->getRepository(Card::class)->createQueryBuilder('c')
@@ -56,21 +65,24 @@ class CardController extends AbstractController
             ->getQuery();
 
         $paginator = new Paginator($query, true);
-        $total = count($paginator);
-        $pages = (int) ceil($total / $limit);
+        $total     = count($paginator);
+        $pages     = (int) ceil($total / $limit);
+
+        $library = $this->getOptionalLibrary($request);
 
         $cards = [];
         foreach ($paginator as $card) {
-            $cards[] = $this->cardToArray($card);
+            $libraryCard = $library ? $this->findLibraryCard($library, $card) : null;
+            $cards[]     = $this->cardToArray($card, $libraryCard);
         }
 
         return $this->json([
-            'cards' => $cards,
+            'cards'      => $cards,
             'pagination' => [
-                'page' => $page,
+                'page'    => $page,
                 'perPage' => $limit,
-                'total' => $total,
-                'pages' => $pages,
+                'total'   => $total,
+                'pages'   => $pages,
             ],
         ]);
     }
@@ -78,16 +90,21 @@ class CardController extends AbstractController
     #[Route('/cards', name: 'api_create_card', methods: ['POST'])]
     public function createCard(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $name = $data['name'] ?? null;
-        $extension = $data['extension'] ?? null;
-        $number = $data['number'] ?? null;
-        $image = $data['image'] ?? null;
+        $data       = json_decode($request->getContent(), true);
+        $name       = $data['name']       ?? null;
+        $extension  = $data['extension']  ?? null;
+        $number     = $data['number']     ?? null;
+        $image      = $data['image']      ?? null;
         $gameTypeId = $data['gameTypeId'] ?? null;
 
         if (!$name || !$extension || !$number || !$gameTypeId) {
-            return $this->json(['error' => 'Missing fields: name, extension, number and gameTypeId required'], Response::HTTP_BAD_REQUEST);
+            return $this->json(
+                ['error' => 'Missing fields: name, extension, number and gameTypeId required'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
+
+        $uuid = strtolower($name . '_' . $number . '_' . $extension);
 
         $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
         if (!$gameType) {
@@ -100,6 +117,7 @@ class CardController extends AbstractController
         $card->setNumber($number);
         $card->setImage($image);
         $card->setGameType($gameType);
+        $card->setUuid($uuid);
 
         $this->em->persist($card);
         $this->em->flush();
@@ -108,14 +126,17 @@ class CardController extends AbstractController
     }
 
     #[Route('/card/{id}', name: 'api_card_get_one', methods: ['GET'])]
-    public function getOneCard(int $id): JsonResponse
+    public function getOneCard(Request $request, int $id): JsonResponse
     {
         $card = $this->em->getRepository(Card::class)->find($id);
         if (!$card) {
             return $this->json(['error' => 'Card not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return $this->json($this->cardToArray($card));
+        $library     = $this->getOptionalLibrary($request);
+        $libraryCard = $library ? $this->findLibraryCard($library, $card) : null;
+
+        return $this->json($this->cardToArray($card, $libraryCard));
     }
 
     #[Route('/card/{id}', name: 'api_card_update', methods: ['PUT'])]
@@ -199,10 +220,16 @@ class CardController extends AbstractController
         $image = $data['image'] ?? null;
         $gameTypeId = $data['gameTypeId'] ?? null;
         $libraryId = $data['libraryId'] ?? null;
+        $numberCard = (int) ($data['numberCard'] ?? 1);
+        $isFavorite = (bool) ($data['isFavorite'] ?? false);
 
 
         if (!$name || !$extension || !$number || !$gameTypeId || !$libraryId) {
             return $this->json(['error' => 'Missing fields: name, extension, number, gameTypeId and libraryId required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($numberCard < 0) {
+            return $this->json(['error' => 'numberCard must be greater than or equal to 0'], Response::HTTP_BAD_REQUEST);
         }
 
         $uuid = strtolower($name . '_' . $number . '_' . $extension);
@@ -212,6 +239,11 @@ class CardController extends AbstractController
             return $this->json(['error' => 'GameType not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $library = $this->em->getRepository(Library::class)->find($libraryId);
+        if (!$library) {
+            return $this->json(['error' => 'Library not found'], Response::HTTP_NOT_FOUND);
+        }
+
         $card = $this->em->getRepository(Card::class)->findOneBy([
             'uuid' => $uuid,
         ]);
@@ -219,16 +251,25 @@ class CardController extends AbstractController
 
         if ($card) {
 
-            $library = $this->em->getReference(Library::class, $libraryId);
+            $libraryCard = $this->em->getRepository(LibraryCard::class)->findOneBy([
+                'card' => $card,
+                'library' => $library,
+            ]);
 
-            if ($card->getLibraries()->contains($library)) {
+            if ($libraryCard) {
                 return $this->json(
                     ['error' => 'Card already exists in library'],
                     Response::HTTP_CONFLICT
                 );
             }
 
-            $card->addLibrary($library);
+            $libraryCard = new LibraryCard();
+            $libraryCard->setCard($card);
+            $libraryCard->setLibrary($library);
+            $libraryCard->setNumberCard($numberCard);
+            $libraryCard->setIsFavorite($isFavorite);
+
+            $this->em->persist($libraryCard);
             $this->em->flush();
 
             return $this->json([
@@ -238,6 +279,8 @@ class CardController extends AbstractController
                 'number' => $card->getNumber(),
                 'image' => $card->getImage(),
                 'uuid' => $card->getUuid(),
+                'numberCard' => $libraryCard->getNumberCard(),
+                'isFavorite' => $libraryCard->isFavorite(),
                 'gameType' => [
                     'id' => $gameType->getId(),
                     'nom' => $gameType->getName(),
@@ -245,7 +288,7 @@ class CardController extends AbstractController
                     'url' => $gameType->getUrl(),
                 ],
             ], Response::HTTP_OK);
-        }else{
+        } else {
 
             $card = new Card();
             $card->setName($name);
@@ -255,8 +298,14 @@ class CardController extends AbstractController
             $card->setGameType($gameType);
             $card->setUuid($uuid);
 
-            $card->addLibrary($this->em->getReference(Library::class, $libraryId));
+            $libraryCard = new LibraryCard();
+            $libraryCard->setCard($card);
+            $libraryCard->setLibrary($library);
+            $libraryCard->setNumberCard($numberCard);
+            $libraryCard->setIsFavorite($isFavorite);
+
             $this->em->persist($card);
+            $this->em->persist($libraryCard);
             $this->em->flush();
 
             return $this->json([
@@ -266,6 +315,8 @@ class CardController extends AbstractController
                 'number' => $card->getNumber(),
                 'image' => $card->getImage(),
                 'uuid' => $card->getUuid(),
+                'numberCard' => $libraryCard->getNumberCard(),
+                'isFavorite' => $libraryCard->isFavorite(),
                 'gameType' => [
                     'id' => $gameType->getId(),
                     'nom' => $gameType->getName(),
@@ -273,10 +324,34 @@ class CardController extends AbstractController
                     'url' => $gameType->getUrl(),
                 ],
             ], Response::HTTP_CREATED);
-
         }
-
-
     }
 
+    private function getOptionalLibrary(Request $request): ?Library
+    {
+        $auth = $request->headers->get('Authorization');
+        $token = null;
+
+        if ($auth && stripos($auth, 'Bearer ') === 0) {
+            $token = substr($auth, 7);
+        } else {
+            $token = $request->query->get('apiToken');
+        }
+
+        if (!$token) {
+            return null;
+        }
+
+        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
+
+        return $user?->getLibrary();
+    }
+
+    private function findLibraryCard(Library $library, Card $card): ?LibraryCard
+    {
+        return $this->em->getRepository(LibraryCard::class)->findOneBy([
+            'library' => $library,
+            'card'    => $card,
+        ]);
+    }
 }

@@ -26,15 +26,15 @@ class Library
     private Collection $sets;
 
     /**
-     * @var Collection<int, Card>
+     * @var Collection<int, LibraryCard>
      */
-    #[ORM\ManyToMany(targetEntity: Card::class, mappedBy: 'libraries')]
-    private Collection $cards;
+    #[ORM\OneToMany(targetEntity: LibraryCard::class, mappedBy: 'library', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $libraryCards;
 
     public function __construct()
     {
         $this->sets = new ArrayCollection();
-        $this->cards = new ArrayCollection();
+        $this->libraryCards = new ArrayCollection();
     }
 
 
@@ -86,27 +86,29 @@ class Library
     }
 
     /**
-     * @return Collection<int, Card>
+     * @return Collection<int, LibraryCard>
      */
-    public function getCards(): Collection
+    public function getLibraryCards(): Collection
     {
-        return $this->cards;
+        return $this->libraryCards;
     }
 
-    public function addCard(Card $card): static
+    public function addLibraryCard(LibraryCard $libraryCard): static
     {
-        if (!$this->cards->contains($card)) {
-            $this->cards->add($card);
-            $card->addLibrary($this);
+        if (!$this->libraryCards->contains($libraryCard)) {
+            $this->libraryCards->add($libraryCard);
+            $libraryCard->setLibrary($this);
         }
 
         return $this;
     }
 
-    public function removeCard(Card $card): static
+    public function removeLibraryCard(LibraryCard $libraryCard): static
     {
-        if ($this->cards->removeElement($card)) {
-            $card->removeLibrary($this);
+        if ($this->libraryCards->removeElement($libraryCard)) {
+            if ($libraryCard->getLibrary() === $this) {
+                $libraryCard->setLibrary(null);
+            }
         }
 
         return $this;
