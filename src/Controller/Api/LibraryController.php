@@ -59,6 +59,7 @@ class LibraryController extends AbstractController
             $sets[] = [
                 'id' => $set->getId(),
                 'name' => $set->getName(),
+                'color' => $set->getColor(),
                 'gameType' => [
                     'id' => $set->getGameType()->getId(),
                     'name' => $set->getGameType()->getName(),
