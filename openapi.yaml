@@ -250,6 +250,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/cards/add-user-card:
+    post:
+      tags:
+        - Cards
+      summary: Ajouter une carte à la bibliothèque d'un utilisateur
+      description: Crée ou rattache une carte existante à une bibliothèque.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserCardRequest'
+      responses:
+        '201':
+          description: Carte créée et ajoutée à la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddUserCardResponse'
+        '200':
+          description: Carte existante ajoutée à la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddUserCardResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: GameType ou Library introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Carte déjà présente dans la bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/card/{id}:
     get:
       tags:
@@ -1125,6 +1168,60 @@ components:
         cardId:
           type: integer
           example: 10
+    AddUserCardRequest:
+      type: object
+      required:
+        - name
+        - extension
+        - number
+        - gameTypeId
+        - libraryId
+      properties:
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        gameTypeId:
+          type: integer
+          example: 1
+        libraryId:
+          type: integer
+          example: 1
+    AddUserCardResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Pikachu
+        extension:
+          type: string
+          example: Base
+        number:
+          type: string
+          example: "001"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/image.png
+        uuid:
+          type: string
+          example: pikachu_001_base
+        gameType:
+          $ref: '#/components/schemas/GameTypeSummary'
     MessageResponse:
       type: object
       properties:
