@@ -3,6 +3,8 @@
 namespace App\Controller\Api;
 
 use App\Entity\Card;
+use App\Entity\Library;
+
 use App\Entity\GameType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Pagination\Paginator;
@@ -36,6 +38,8 @@ class CardController extends AbstractController
             ],
         ];
     }
+
+    // CRUD
 
     #[Route('/cards', name: 'api_cards_list', methods: ['GET'])]
     public function listCards(Request $request): JsonResponse
@@ -180,4 +184,93 @@ class CardController extends AbstractController
 
         return $this->json(['message' => 'Card deleted successfully']);
     }
+
+    //Route Custom
+
+    #[Route('/cards/add-user-card', name: 'api_add_user_card', methods: ['POST'])]
+    public function AddUserCard(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $name = $data['name'] ?? null;
+        $extension = $data['extension'] ?? null;
+        $number = $data['number'] ?? null;
+        $image = $data['image'] ?? null;
+        $gameTypeId = $data['gameTypeId'] ?? null;
+        $libraryId = $data['libraryId'] ?? null;
+
+
+        if (!$name || !$extension || !$number || !$gameTypeId || !$libraryId) {
+            return $this->json(['error' => 'Missing fields: name, extension, number, gameTypeId and libraryId required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $uuid = strtolower($name . '_' . $number . '_' . $extension);
+
+        $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
+        if (!$gameType) {
+            return $this->json(['error' => 'GameType not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $card = $this->em->getRepository(Card::class)->findOneBy([
+            'uuid' => $uuid,
+        ]);
+
+
+        if ($card) {
+
+            $library = $this->em->getReference(Library::class, $libraryId);
+
+            if ($card->getLibraries()->contains($library)) {
+                return $this->json(
+                    ['error' => 'Card already exists in library'],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            $card->addLibrary($library);
+            $this->em->flush();
+
+            return $this->json([
+                'id' => $card->getId(),
+                'name' => $card->getName(),
+                'extension' => $card->getExtension(),
+                'number' => $card->getNumber(),
+                'image' => $card->getImage(),
+                'uuid' => $card->getUuid(),
+                'gameType' => [
+                    'id' => $gameType->getId(),
+                    'nom' => $gameType->getName(),
+                ],
+            ], Response::HTTP_OK);
+        }else{
+
+            $card = new Card();
+            $card->setName($name);
+            $card->setExtension($extension);
+            $card->setNumber($number);
+            $card->setImage($image);
+            $card->setGameType($gameType);
+            $card->setUuid($uuid);
+
+            $card->addLibrary($this->em->getReference(Library::class, $libraryId));
+            $this->em->persist($card);
+            $this->em->flush();
+
+            return $this->json([
+                'id' => $card->getId(),
+                'name' => $card->getName(),
+                'extension' => $card->getExtension(),
+                'number' => $card->getNumber(),
+                'image' => $card->getImage(),
+                'uuid' => $card->getUuid(),
+                'gameType' => [
+                    'id' => $gameType->getId(),
+                    'nom' => $gameType->getName(),
+                ],
+            ], Response::HTTP_CREATED);
+
+        }
+
+
+    }
+
 }
