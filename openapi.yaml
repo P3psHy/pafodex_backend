@@ -285,6 +285,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/me/library/search:
+    get:
+      tags:
+        - Library
+      summary: Rechercher dans la bibliothèque de l'utilisateur connecté
+      description: |
+        Recherche les sets et les cartes de la bibliothèque connectée.
+        Le token peut être fourni dans l'en-tête Authorization: Bearer <token>
+        ou en query paramètre apiToken.
+      parameters:
+        - $ref: '#/components/parameters/ApiTokenQuery'
+        - name: q
+          in: query
+          description: Texte recherché dans les noms de sets, noms de cartes, extensions, numéros et types de jeu
+          required: true
+          schema:
+            type: string
+            example: Pikachu
+        - name: limit
+          in: query
+          description: Nombre maximum de sets et de cartes retournés
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Résultats de recherche
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibrarySearchResponse'
+        '400':
+          description: Paramètre de recherche manquant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bibliothèque introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/me/sets:
     get:
       tags:
@@ -671,6 +725,20 @@ components:
             $ref: '#/components/schemas/CardResponse'
         pagination:
           $ref: '#/components/schemas/Pagination'
+    LibrarySearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+          example: Pikachu
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetSummary'
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardResponse'
     Pagination:
       type: object
       properties:
