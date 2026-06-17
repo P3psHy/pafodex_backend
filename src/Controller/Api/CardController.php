@@ -4,13 +4,12 @@ namespace App\Controller\Api;
 
 use App\Entity\Card;
 use App\Entity\GameType;
-use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api')]
 class CardController extends AbstractController
@@ -62,5 +61,26 @@ class CardController extends AbstractController
                 'nom' => $gameType->getName(),
             ],
         ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/card/{id}', name: 'api_card_get_one', methods: ['GET'])]
+    public function getOneCard(int $id): JsonResponse
+    {
+        $gameType = $this->em->getRepository(Card::class)->find($id);
+        if (!$gameType) {
+            return $this->json(['error' => 'Game type not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'id' => $gameType->getId(),
+            'name' => $gameType->getName(),
+            'extension' => $gameType->getExtension(),
+            'number' => $gameType->getNumber(),
+            'image' => $gameType->getImage(),
+            'gameType' => [
+                'id' => $gameType->getGameType()->getId(),
+                'nom' => $gameType->getGameType()->getName(),
+            ],
+        ]);
     }
 }
