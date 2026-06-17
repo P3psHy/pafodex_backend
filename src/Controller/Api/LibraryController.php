@@ -64,6 +64,7 @@ class LibraryController extends AbstractController
                     'id' => $set->getGameType()->getId(),
                     'name' => $set->getGameType()->getName(),
                     'abbreviated' => $set->getGameType()->getAbbreviated(),
+                    'url' => $set->getGameType()->getUrl(),
                 ],
             ];
         }
@@ -98,6 +99,7 @@ class LibraryController extends AbstractController
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
                     'abbreviated' => $card->getGameType()->getAbbreviated(),
+                    'url' => $card->getGameType()->getUrl(),
                 ],
             ];
         }
@@ -177,6 +179,7 @@ class LibraryController extends AbstractController
                     'id' => $set->getGameType()->getId(),
                     'nom' => $set->getGameType()->getName(),
                     'abbreviated' => $set->getGameType()->getAbbreviated(),
+                    'url' => $set->getGameType()->getUrl(),
                 ],
             ];
         }
@@ -193,6 +196,7 @@ class LibraryController extends AbstractController
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
                     'abbreviated' => $card->getGameType()->getAbbreviated(),
+                    'url' => $card->getGameType()->getUrl(),
                 ],
             ];
         }
