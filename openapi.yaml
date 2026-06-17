@@ -6,8 +6,10 @@ info:
     Documentation Swagger de l'API Pafodex.
     Les endpoints exposés sont détaillés avec les payloads, paramètres, réponses et pagination.
 servers:
+  - url: /
+    description: Serveur courant
   - url: https://pafodex-backend.onrender.com
-    description: Serveur
+    description: Serveur Render
 paths:
   /api/register:
     post:
