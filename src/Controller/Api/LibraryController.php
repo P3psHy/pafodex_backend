@@ -24,29 +24,12 @@ class LibraryController extends AbstractController
         $this->em = $em;
     }
 
-    private function extractBearerToken(Request $request): ?string
-    {
-        $auth = $request->headers->get('Authorization');
-        if (!$auth) {
-            return null;
-        }
-        if (0 === stripos($auth, 'Bearer ')) {
-            return substr($auth, 7);
-        }
-        return null;
-    }
-
     #[Route('/me/library', name: 'api_me_library', methods: ['GET'])]
     public function getMyLibrary(Request $request): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
         }
 
         $library = $user->getLibrary();
@@ -117,14 +100,9 @@ class LibraryController extends AbstractController
     #[Route('/me/library/search', name: 'api_me_library_search', methods: ['GET'])]
     public function searchMyLibrary(Request $request): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
         }
 
         $library = $user->getLibrary();

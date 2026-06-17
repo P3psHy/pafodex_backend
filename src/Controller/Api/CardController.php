@@ -6,6 +6,7 @@ use App\Entity\Card;
 use App\Entity\Library;
 
 use App\Entity\GameType;
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -77,6 +78,10 @@ class CardController extends AbstractController
     public function createCard(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
         $name = $data['name'] ?? null;
         $extension = $data['extension'] ?? null;
         $number = $data['number'] ?? null;
@@ -190,17 +195,30 @@ class CardController extends AbstractController
     #[Route('/cards/add-user-card', name: 'api_add_user_card', methods: ['POST'])]
     public function AddUserCard(Request $request): JsonResponse
     {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $library = $user->getLibrary();
+        if (!$library instanceof Library) {
+            return $this->json(['error' => 'Library not found'], Response::HTTP_NOT_FOUND);
+        }
+
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
         $name = $data['name'] ?? null;
         $extension = $data['extension'] ?? null;
         $number = $data['number'] ?? null;
         $image = $data['image'] ?? null;
         $gameTypeId = $data['gameTypeId'] ?? null;
-        $libraryId = $data['libraryId'] ?? null;
 
 
-        if (!$name || !$extension || !$number || !$gameTypeId || !$libraryId) {
-            return $this->json(['error' => 'Missing fields: name, extension, number, gameTypeId and libraryId required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$extension || !$number || !$gameTypeId) {
+            return $this->json(['error' => 'Missing fields: name, extension, number and gameTypeId required'], Response::HTTP_BAD_REQUEST);
         }
 
         $uuid = strtolower($name . '_' . $number . '_' . $extension);
@@ -216,9 +234,6 @@ class CardController extends AbstractController
 
 
         if ($card) {
-
-            $library = $this->em->getReference(Library::class, $libraryId);
-
             if ($card->getLibraries()->contains($library)) {
                 return $this->json(
                     ['error' => 'Card already exists in library'],
@@ -251,7 +266,7 @@ class CardController extends AbstractController
             $card->setGameType($gameType);
             $card->setUuid($uuid);
 
-            $card->addLibrary($this->em->getReference(Library::class, $libraryId));
+            $card->addLibrary($library);
             $this->em->persist($card);
             $this->em->flush();
 

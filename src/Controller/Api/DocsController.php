@@ -12,6 +12,10 @@ class DocsController extends AbstractController
     #[Route('', name: 'api_docs', methods: ['GET'])]
     public function swaggerUi(): Response
     {
+        if ('prod' === $this->getParameter('kernel.environment')) {
+            throw $this->createNotFoundException();
+        }
+
         $html = <<<'HTML'
 <!DOCTYPE html>
 <html lang="fr">
@@ -68,6 +72,10 @@ HTML;
     #[Route('/openapi.yaml', name: 'api_docs_openapi_yaml', methods: ['GET'])]
     public function openApiFile(): Response
     {
+        if ('prod' === $this->getParameter('kernel.environment')) {
+            throw $this->createNotFoundException();
+        }
+
         $projectDir = dirname(__DIR__, 3);
         $filePath = $projectDir . '/openapi.yaml';
 

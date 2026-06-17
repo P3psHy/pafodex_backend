@@ -42,6 +42,10 @@ class GameTypeController extends AbstractController
     public function createGameType(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
         $name = $data['name'] ?? null;
 
         if (!$name) {
@@ -83,6 +87,10 @@ class GameTypeController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
         $name = $data['name'] ?? null;
 
         if (!$name) {

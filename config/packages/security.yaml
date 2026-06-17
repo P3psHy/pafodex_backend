@@ -16,13 +16,15 @@ security:
             # Ensure dev tools and static assets are always allowed
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
-        main:
-            lazy: true
-            provider: app_user_provider
-
         api:
             pattern: ^/api
             stateless: true
+            provider: app_user_provider
+            custom_authenticator: App\Security\ApiTokenAuthenticator
+            entry_point: App\Security\ApiTokenAuthenticator
+
+        main:
+            lazy: true
             provider: app_user_provider
 
             # Activate different ways to authenticate:
@@ -33,8 +35,20 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/api/register$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/api/doc\.json$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/cards$, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/card/\d+$, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/gametype, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/me, roles: ROLE_USER }
+        - { path: ^/api/logout$, roles: ROLE_USER }
+        - { path: ^/api/cards/add-user-card$, roles: ROLE_USER }
+        - { path: ^/api/cards$, roles: ROLE_ADMIN, methods: [POST] }
+        - { path: ^/api/card/\d+$, roles: ROLE_ADMIN, methods: [PUT, DELETE] }
+        - { path: ^/api/gametype, roles: ROLE_ADMIN, methods: [POST, PUT, DELETE] }
+        - { path: ^/api, roles: ROLE_USER }
 
 when@test:
     security:

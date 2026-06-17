@@ -28,13 +28,29 @@ class AuthController extends AbstractController
     public function register(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        $pseudo = $data['pseudo'] ?? null;
-        $mail = $data['mail'] ?? null;
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $pseudo = $this->cleanString($data['pseudo'] ?? null);
+        $mail = $this->normalizeEmail($data['mail'] ?? null);
         $password = $data['password'] ?? null;
         $passwordConfirm = $data['passwordConfirm'] ?? null;
 
         if (!$pseudo || !$mail || !$password || !$passwordConfirm) {
             return $this->json(['error' => 'Missing fields'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!filter_var($mail, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => 'Invalid email'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (strlen($pseudo) > 50) {
+            return $this->json(['error' => 'Pseudo must be 50 characters or less'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$this->isStrongEnoughPassword($password)) {
+            return $this->json(['error' => 'Password must be at least 8 characters and contain letters and numbers'], Response::HTTP_BAD_REQUEST);
         }
 
         if ($password !== $passwordConfirm) {
@@ -70,7 +86,11 @@ class AuthController extends AbstractController
     public function login(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        $mail = $data['mail'] ?? null;
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $mail = $this->normalizeEmail($data['mail'] ?? null);
         $password = $data['password'] ?? null;
 
         if (!$mail || !$password) {
@@ -93,28 +113,11 @@ class AuthController extends AbstractController
         return $this->json(['id' => $user->getId(), 'apiToken' => $user->getApiToken()]);
     }
 
-    private function extractBearerToken(Request $request): ?string
+    private function getAuthenticatedUser(): User|JsonResponse
     {
-        $auth = $request->headers->get('Authorization');
-        if (!$auth) {
-            return null;
-        }
-        if (0 === stripos($auth, 'Bearer ')) {
-            return substr($auth, 7);
-        }
-        return null;
-    }
-
-    private function getAuthenticatedUser(Request $request): User|JsonResponse
-    {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
         }
 
         return $user;
@@ -130,16 +133,11 @@ class AuthController extends AbstractController
     }
 
     #[Route('/logout', name: 'api_logout', methods: ['POST'])]
-    public function logout(Request $request): JsonResponse
+    public function logout(): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
         $user->setApiToken(null);
@@ -151,7 +149,7 @@ class AuthController extends AbstractController
     #[Route('/me', name: 'api_me', methods: ['GET'])]
     public function me(Request $request): JsonResponse
     {
-        $user = $this->getAuthenticatedUser($request);
+        $user = $this->getAuthenticatedUser();
         if ($user instanceof JsonResponse) {
             return $user;
         }
@@ -162,7 +160,7 @@ class AuthController extends AbstractController
     #[Route('/me', name: 'api_me_update', methods: ['PUT'])]
     public function updateMe(Request $request): JsonResponse
     {
-        $user = $this->getAuthenticatedUser($request);
+        $user = $this->getAuthenticatedUser();
         if ($user instanceof JsonResponse) {
             return $user;
         }
@@ -173,23 +171,32 @@ class AuthController extends AbstractController
         }
 
         if (array_key_exists('pseudo', $data)) {
-            if (!$data['pseudo']) {
+            $pseudo = $this->cleanString($data['pseudo']);
+            if (!$pseudo) {
                 return $this->json(['error' => 'Pseudo cannot be empty'], Response::HTTP_BAD_REQUEST);
             }
-            $user->setPseudo($data['pseudo']);
+            if (strlen($pseudo) > 50) {
+                return $this->json(['error' => 'Pseudo must be 50 characters or less'], Response::HTTP_BAD_REQUEST);
+            }
+            $user->setPseudo($pseudo);
         }
 
         if (array_key_exists('mail', $data)) {
-            if (!$data['mail']) {
+            $mail = $this->normalizeEmail($data['mail']);
+            if (!$mail) {
                 return $this->json(['error' => 'Mail cannot be empty'], Response::HTTP_BAD_REQUEST);
             }
 
-            $existing = $this->em->getRepository(User::class)->findOneBy(['mail' => $data['mail']]);
+            if (!filter_var($mail, FILTER_VALIDATE_EMAIL)) {
+                return $this->json(['error' => 'Invalid email'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $existing = $this->em->getRepository(User::class)->findOneBy(['mail' => $mail]);
             if ($existing && $existing->getId() !== $user->getId()) {
                 return $this->json(['error' => 'Email already used'], Response::HTTP_CONFLICT);
             }
 
-            $user->setMail($data['mail']);
+            $user->setMail($mail);
         }
 
         if (array_key_exists('password', $data) || array_key_exists('passwordConfirm', $data)) {
@@ -204,6 +211,10 @@ class AuthController extends AbstractController
                 return $this->json(['error' => 'Passwords do not match'], Response::HTTP_BAD_REQUEST);
             }
 
+            if (!$this->isStrongEnoughPassword($password)) {
+                return $this->json(['error' => 'Password must be at least 8 characters and contain letters and numbers'], Response::HTTP_BAD_REQUEST);
+            }
+
             $user->setPassword($this->hasher->hashPassword($user, $password));
         }
 
@@ -215,7 +226,7 @@ class AuthController extends AbstractController
     #[Route('/me', name: 'api_me_delete', methods: ['DELETE'])]
     public function deleteMe(Request $request): JsonResponse
     {
-        $user = $this->getAuthenticatedUser($request);
+        $user = $this->getAuthenticatedUser();
         if ($user instanceof JsonResponse) {
             return $user;
         }
@@ -224,5 +235,31 @@ class AuthController extends AbstractController
         $this->em->flush();
 
         return $this->json(['message' => 'User deleted successfully']);
+    }
+
+    private function cleanString(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return '' === $value ? null : $value;
+    }
+
+    private function normalizeEmail(mixed $value): ?string
+    {
+        $value = $this->cleanString($value);
+
+        return null === $value ? null : strtolower($value);
+    }
+
+    private function isStrongEnoughPassword(mixed $password): bool
+    {
+        return is_string($password)
+            && strlen($password) >= 8
+            && (bool) preg_match('/[A-Za-z]/', $password)
+            && (bool) preg_match('/\d/', $password);
     }
 }
