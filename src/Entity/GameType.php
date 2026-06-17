@@ -31,6 +31,9 @@ class GameType
     #[ORM\OneToMany(targetEntity: Card::class, mappedBy: 'gameType', orphanRemoval: true)]
     private Collection $cards;
 
+    #[ORM\Column(length: 255)]
+    private ?string $abbreviated = null;
+
     public function __construct()
     {
         $this->set = new ArrayCollection();
@@ -109,6 +112,18 @@ class GameType
                 $card->setGameType(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getAbbreviated(): ?string
+    {
+        return $this->abbreviated;
+    }
+
+    public function setAbbreviated(string $abbreviated): static
+    {
+        $this->abbreviated = $abbreviated;
 
         return $this;
     }

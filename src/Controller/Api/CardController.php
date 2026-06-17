@@ -239,6 +239,7 @@ class CardController extends AbstractController
                 'gameType' => [
                     'id' => $gameType->getId(),
                     'nom' => $gameType->getName(),
+                    'abbreviated' => $gameType->getAbbreviated(),
                 ],
             ], Response::HTTP_OK);
         }else{
@@ -265,6 +266,7 @@ class CardController extends AbstractController
                 'gameType' => [
                     'id' => $gameType->getId(),
                     'nom' => $gameType->getName(),
+                    'abbreviated' => $gameType->getAbbreviated(),
                 ],
             ], Response::HTTP_CREATED);
 

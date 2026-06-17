@@ -32,6 +32,7 @@ class GameTypeController extends AbstractController
             $data[] = [
                 'id' => $gameType->getId(),
                 'name' => $gameType->getName(),
+                'abbreviated' => $gameType->getAbbreviated(),
             ];
         }
 
@@ -43,13 +44,15 @@ class GameTypeController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         $name = $data['name'] ?? null;
+        $abbreviated = $data['abbreviated'] ?? null;
 
-        if (!$name) {
-            return $this->json(['error' => 'Missing field: name required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$abbreviated) {
+            return $this->json(['error' => 'Missing fields: name and abbreviated required'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType = new GameType();
         $gameType->setName($name);
+        $gameType->setAbbreviated($abbreviated);
 
         $this->em->persist($gameType);
         $this->em->flush();
@@ -57,6 +60,7 @@ class GameTypeController extends AbstractController
         return $this->json([
             'id' => $gameType->getId(),
             'name' => $gameType->getName(),
+            'abbreviated' => $gameType->getAbbreviated(),
         ], Response::HTTP_CREATED);
     }
 
@@ -71,6 +75,7 @@ class GameTypeController extends AbstractController
         return $this->json([
             'id' => $gameType->getId(),
             'name' => $gameType->getName(),
+            'abbreviated' => $gameType->getAbbreviated(),
         ]);
     }
 
@@ -84,17 +89,20 @@ class GameTypeController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $name = $data['name'] ?? null;
+        $abbreviated = $data['abbreviated'] ?? null;
 
-        if (!$name) {
-            return $this->json(['error' => 'Missing field: name required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$abbreviated) {
+            return $this->json(['error' => 'Missing fields: name and abbreviated required'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType->setName($name);
+        $gameType->setAbbreviated($abbreviated);
         $this->em->flush();
 
         return $this->json([
             'id' => $gameType->getId(),
             'name' => $gameType->getName(),
+            'abbreviated' => $gameType->getAbbreviated(),
         ]);
     }
 
