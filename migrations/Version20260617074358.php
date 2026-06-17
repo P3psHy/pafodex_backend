@@ -19,23 +19,13 @@ final class Version20260617074358 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE card ADD name VARCHAR(255) NOT NULL');
-        $this->addSql('ALTER TABLE card ADD number VARCHAR(255) NOT NULL');
-        $this->addSql('ALTER TABLE card ADD image VARCHAR(255) DEFAULT NULL');
-        $this->addSql('ALTER TABLE card DROP nom');
-        $this->addSql('ALTER TABLE card DROP numero');
+        // les colonnes name/number/image sont déjà créées par Version20260616100038
+        // il ne reste plus que la suppression du défaut sur set.color à appliquer
         $this->addSql('ALTER TABLE set ALTER color DROP DEFAULT');
     }
 
     public function down(Schema $schema): void
     {
-        // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE card ADD nom VARCHAR(255) NOT NULL');
-        $this->addSql('ALTER TABLE card ADD numero VARCHAR(255) NOT NULL');
-        $this->addSql('ALTER TABLE card DROP name');
-        $this->addSql('ALTER TABLE card DROP number');
-        $this->addSql('ALTER TABLE card DROP image');
         $this->addSql('ALTER TABLE set ALTER color SET DEFAULT \'#FFFFFF\'');
     }
 }
