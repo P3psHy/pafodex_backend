@@ -38,9 +38,19 @@ class Card
     #[ORM\ManyToMany(targetEntity: GameSet::class, mappedBy: 'cards')]
     private Collection $sets;
 
+    #[ORM\Column(length: 512, nullable: true)]
+    private ?string $uuid = null;
+
+    /**
+     * @var Collection<int, Library>
+     */
+    #[ORM\ManyToMany(targetEntity: Library::class, inversedBy: 'cards')]
+    private Collection $libraries;
+
     public function __construct()
     {
         $this->sets = new ArrayCollection();
+        $this->libraries = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -128,6 +138,42 @@ class Card
     public function removeSet(GameSet $set): static
     {
         $this->sets->removeElement($set);
+
+        return $this;
+    }
+
+    public function getUuid(): ?string
+    {
+        return $this->uuid;
+    }
+
+    public function setUuid(?string $uuid): static
+    {
+        $this->uuid = $uuid;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Library>
+     */
+    public function getLibraries(): Collection
+    {
+        return $this->libraries;
+    }
+
+    public function addLibrary(Library $library): static
+    {
+        if (!$this->libraries->contains($library)) {
+            $this->libraries->add($library);
+        }
+
+        return $this;
+    }
+
+    public function removeLibrary(Library $library): static
+    {
+        $this->libraries->removeElement($library);
 
         return $this;
     }

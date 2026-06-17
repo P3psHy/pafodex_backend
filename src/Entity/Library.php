@@ -25,9 +25,16 @@ class Library
     #[ORM\OneToMany(targetEntity: Set::class, mappedBy: 'library', orphanRemoval: true)]
     private Collection $sets;
 
+    /**
+     * @var Collection<int, Card>
+     */
+    #[ORM\ManyToMany(targetEntity: Card::class, mappedBy: 'libraries')]
+    private Collection $cards;
+
     public function __construct()
     {
         $this->sets = new ArrayCollection();
+        $this->cards = new ArrayCollection();
     }
 
 
@@ -73,6 +80,33 @@ class Library
             if ($set->getLibrary() === $this) {
                 $set->setLibrary(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Card>
+     */
+    public function getCards(): Collection
+    {
+        return $this->cards;
+    }
+
+    public function addCard(Card $card): static
+    {
+        if (!$this->cards->contains($card)) {
+            $this->cards->add($card);
+            $card->addLibrary($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCard(Card $card): static
+    {
+        if ($this->cards->removeElement($card)) {
+            $card->removeLibrary($this);
         }
 
         return $this;
