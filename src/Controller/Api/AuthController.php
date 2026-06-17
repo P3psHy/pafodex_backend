@@ -15,6 +15,8 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api')]
 class AuthController extends AbstractController
 {
+    private const API_TOKEN_TTL = '+1 hour';
+
     private EntityManagerInterface $em;
     private UserPasswordHasherInterface $hasher;
 
@@ -52,8 +54,7 @@ class AuthController extends AbstractController
         $user->setRoles(['ROLE_USER']);
         $hashed = $this->hasher->hashPassword($user, $password);
         $user->setPassword($hashed);
-        // generate simple API token
-        $user->setApiToken(bin2hex(random_bytes(32)));
+        $this->refreshApiToken($user);
 
         // create and link a Library for this user
         $library = new Library();
@@ -63,7 +64,7 @@ class AuthController extends AbstractController
         $this->em->persist($user);
         $this->em->flush();
 
-        return $this->json(['id' => $user->getId(), 'apiToken' => $user->getApiToken()], Response::HTTP_CREATED);
+        return $this->json($this->authPayload($user), Response::HTTP_CREATED);
     }
 
     #[Route('/login', name: 'api_login', methods: ['POST'])]
@@ -86,11 +87,10 @@ class AuthController extends AbstractController
             return $this->json(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // rotate token
-        $user->setApiToken(bin2hex(random_bytes(32)));
+        $this->refreshApiToken($user);
         $this->em->flush();
 
-        return $this->json(['id' => $user->getId(), 'apiToken' => $user->getApiToken()]);
+        return $this->json($this->authPayload($user));
     }
 
     private function extractBearerToken(Request $request): ?string
@@ -105,6 +105,21 @@ class AuthController extends AbstractController
         return null;
     }
 
+    private function refreshApiToken(User $user): void
+    {
+        $user->setApiToken(bin2hex(random_bytes(32)));
+        $user->setApiTokenExpiresAt(new \DateTimeImmutable(self::API_TOKEN_TTL));
+    }
+
+    private function authPayload(User $user): array
+    {
+        return [
+            'id' => $user->getId(),
+            'apiToken' => $user->getApiToken(),
+            'apiTokenExpiresAt' => $user->getApiTokenExpiresAt()?->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
     private function getAuthenticatedUser(Request $request): User|JsonResponse
     {
         $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
@@ -115,6 +130,14 @@ class AuthController extends AbstractController
         $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
         if (!$user) {
             return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($user->isApiTokenExpired()) {
+            $user->setApiToken(null);
+            $user->setApiTokenExpiresAt(null);
+            $this->em->flush();
+
+            return $this->json(['error' => 'Token expired'], Response::HTTP_UNAUTHORIZED);
         }
 
         return $user;
@@ -143,6 +166,7 @@ class AuthController extends AbstractController
         }
 
         $user->setApiToken(null);
+        $user->setApiTokenExpiresAt(null);
         $this->em->flush();
 
         return $this->json(['success' => true]);

@@ -26,6 +26,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $apiToken = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $apiTokenExpiresAt = null;
+
     /**
      * @var list<string> The user roles
      */
@@ -132,6 +135,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->apiToken = $apiToken;
 
         return $this;
+    }
+
+    public function getApiTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->apiTokenExpiresAt;
+    }
+
+    public function setApiTokenExpiresAt(?\DateTimeImmutable $apiTokenExpiresAt): static
+    {
+        $this->apiTokenExpiresAt = $apiTokenExpiresAt;
+
+        return $this;
+    }
+
+    public function isApiTokenExpired(): bool
+    {
+        return $this->apiTokenExpiresAt === null || $this->apiTokenExpiresAt <= new \DateTimeImmutable();
     }
 
     /**

@@ -344,6 +344,10 @@ class CardController extends AbstractController
 
         $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
 
+        if ($user?->isApiTokenExpired()) {
+            return null;
+        }
+
         return $user?->getLibrary();
     }
 
