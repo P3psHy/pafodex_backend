@@ -87,6 +87,8 @@ class CardController extends AbstractController
             return $this->json(['error' => 'Missing fields: name, extension, number and gameTypeId required'], Response::HTTP_BAD_REQUEST);
         }
 
+        $uuid = strtolower($name . '_' . $number . '_' . $extension);
+
         $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
         if (!$gameType) {
             return $this->json(['error' => 'GameType not found'], Response::HTTP_NOT_FOUND);
@@ -98,6 +100,7 @@ class CardController extends AbstractController
         $card->setNumber($number);
         $card->setImage($image);
         $card->setGameType($gameType);
+        $card->setUuid($uuid);
 
         $this->em->persist($card);
         $this->em->flush();
