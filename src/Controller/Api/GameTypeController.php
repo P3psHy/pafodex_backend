@@ -33,6 +33,7 @@ class GameTypeController extends AbstractController
                 'id' => $gameType->getId(),
                 'name' => $gameType->getName(),
                 'abbreviated' => $gameType->getAbbreviated(),
+                'url' => $gameType->getUrl(),
             ];
         }
 
@@ -45,14 +46,16 @@ class GameTypeController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $name = $data['name'] ?? null;
         $abbreviated = $data['abbreviated'] ?? null;
+        $url = $data['url'] ?? null;
 
-        if (!$name || !$abbreviated) {
-            return $this->json(['error' => 'Missing fields: name and abbreviated required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$abbreviated || !$url) {
+            return $this->json(['error' => 'Missing fields: name, abbreviated and url required'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType = new GameType();
         $gameType->setName($name);
         $gameType->setAbbreviated($abbreviated);
+        $gameType->setUrl($url);
 
         $this->em->persist($gameType);
         $this->em->flush();
@@ -76,6 +79,7 @@ class GameTypeController extends AbstractController
             'id' => $gameType->getId(),
             'name' => $gameType->getName(),
             'abbreviated' => $gameType->getAbbreviated(),
+            'url' => $gameType->getUrl(),
         ]);
     }
 
@@ -90,19 +94,22 @@ class GameTypeController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $name = $data['name'] ?? null;
         $abbreviated = $data['abbreviated'] ?? null;
+        $url = $data['url'] ?? null;
 
-        if (!$name || !$abbreviated) {
-            return $this->json(['error' => 'Missing fields: name and abbreviated required'], Response::HTTP_BAD_REQUEST);
+        if (!$name || !$abbreviated || !$url) {
+            return $this->json(['error' => 'Missing fields: name, abbreviated and url required'], Response::HTTP_BAD_REQUEST);
         }
 
         $gameType->setName($name);
         $gameType->setAbbreviated($abbreviated);
+        $gameType->setUrl($url);
         $this->em->flush();
 
         return $this->json([
             'id' => $gameType->getId(),
             'name' => $gameType->getName(),
             'abbreviated' => $gameType->getAbbreviated(),
+            'url' => $gameType->getUrl(),
         ]);
     }
 

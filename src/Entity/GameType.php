@@ -31,8 +31,11 @@ class GameType
     #[ORM\OneToMany(targetEntity: Card::class, mappedBy: 'gameType', orphanRemoval: true)]
     private Collection $cards;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $abbreviated = null;
+
+    #[ORM\Column(length: 512, nullable: true)]
+    private ?string $url = null;
 
     public function __construct()
     {
@@ -124,6 +127,18 @@ class GameType
     public function setAbbreviated(string $abbreviated): static
     {
         $this->abbreviated = $abbreviated;
+
+        return $this;
+    }
+
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function setUrl(?string $url): static
+    {
+        $this->url = $url;
 
         return $this;
     }

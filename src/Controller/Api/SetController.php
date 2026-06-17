@@ -60,7 +60,8 @@ class SetController extends AbstractController
             'gameType' => [
                 'id' => $set->getGameType()->getId(),
                 'nom' => $set->getGameType()->getName(),
-                'abbreviated' => $set->getGameType()->getAbbreviated()
+                'abbreviated' => $set->getGameType()->getAbbreviated(),
+                'url' => $set->getGameType()->getUrl(),
             ],
         ];
     }
@@ -92,7 +93,8 @@ class SetController extends AbstractController
                 'gameType' => [
                     'id' => $set->getGameType()->getId(),
                     'nom' => $set->getGameType()->getName(),
-                    'abbreviated' => $set->getGameType()->getAbbreviated()
+                    'abbreviated' => $set->getGameType()->getAbbreviated(),
+                    'url' => $set->getGameType()->getUrl(),
                 ],
             ];
         }
@@ -152,7 +154,8 @@ class SetController extends AbstractController
             'gameType' => [
                 'id' => $gameType->getId(),
                 'nom' => $gameType->getName(),
-                'abbreviated' => $set->getGameType()->getAbbreviated()
+                'abbreviated' => $set->getGameType()->getAbbreviated(),
+                'url' => $set->getGameType()->getUrl(),
             ],
         ], Response::HTTP_CREATED);
     }
@@ -208,6 +211,7 @@ class SetController extends AbstractController
                     'id' => $card->getGameType()->getId(),
                     'nom' => $card->getGameType()->getName(),
                     'abbreviated' => $card->getGameType()->getAbbreviated(),
+                    'url' => $card->getGameType()->getUrl(),
                 ],
             ];
         }
@@ -359,6 +363,7 @@ class SetController extends AbstractController
                 'id' => $card->getGameType()->getId(),
                 'nom' => $card->getGameType()->getName(),
                 'abbreviated' => $card->getGameType()->getAbbreviated(),
+                'url' => $card->getGameType()->getUrl(),
             ],
         ], Response::HTTP_OK);
     }
