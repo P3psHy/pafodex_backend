@@ -45,10 +45,6 @@ class SeedDatabaseCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $append = (bool) $input->getOption('append');
 
-        if (!$append) {
-            $this->purgeData();
-        }
-
         $gameTypes = $this->seedGameTypes();
         $cards = $this->seedCards($gameTypes);
         $users = $this->seedUsers();
@@ -82,20 +78,6 @@ class SeedDatabaseCommand extends Command
         );
 
         return Command::SUCCESS;
-    }
-
-    private function purgeData(): void
-    {
-        $connection = $this->entityManager->getConnection();
-        $platform = $connection->getDatabasePlatform();
-
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('card_library'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('set_card'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('set'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('card'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('library'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('user'));
-        $connection->executeStatement('DELETE FROM ' . $platform->quoteIdentifier('game_type'));
     }
 
     /**
