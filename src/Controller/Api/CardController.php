@@ -214,6 +214,96 @@ class CardController extends AbstractController
     public function AddUserCard(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $result = $this->prepareUserCard($data);
+        if (isset($result['error'])) {
+            return $this->json(['error' => $result['error']], $result['status']);
+        }
+
+        $this->em->flush();
+
+        return $this->json(
+            $this->userCardToArray($result['card'], $result['libraryCard']),
+            $result['status']
+        );
+    }
+
+    #[Route('/cards/add-user-card/list', name: 'api_add_user_card_list', methods: ['POST'])]
+    public function addUserCardList(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $cardsData = $data['cards'] ?? $data;
+        if (!is_array($cardsData) || $cardsData === []) {
+            return $this->json(['error' => 'Missing field: cards'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $results = [];
+        $seen = [];
+
+        foreach ($cardsData as $index => $cardData) {
+            if (!is_array($cardData)) {
+                return $this->json([
+                    'error' => 'Invalid card data',
+                    'index' => $index,
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $uuid = $this->buildCardUuid(
+                $cardData['name'] ?? null,
+                $cardData['number'] ?? null,
+                $cardData['extension'] ?? null
+            );
+            $libraryId = $cardData['libraryId'] ?? null;
+            $duplicateKey = $libraryId . ':' . $uuid;
+
+            if ($uuid && $libraryId && isset($seen[$duplicateKey])) {
+                return $this->json([
+                    'error' => 'Card already exists in request',
+                    'index' => $index,
+                ], Response::HTTP_CONFLICT);
+            }
+
+            $result = $this->prepareUserCard($cardData);
+            if (isset($result['error'])) {
+                return $this->json([
+                    'error' => $result['error'],
+                    'index' => $index,
+                ], $result['status']);
+            }
+
+            $seen[$duplicateKey] = true;
+            $results[] = $result;
+        }
+
+        $this->em->flush();
+
+        $cards = [];
+        $created = 0;
+        foreach ($results as $result) {
+            if ($result['status'] === Response::HTTP_CREATED) {
+                ++$created;
+            }
+
+            $cards[] = $this->userCardToArray($result['card'], $result['libraryCard']);
+        }
+
+        return $this->json([
+            'cards' => $cards,
+            'count' => count($cards),
+            'created' => $created,
+            'existing' => count($cards) - $created,
+        ], Response::HTTP_CREATED);
+    }
+
+    private function prepareUserCard(array $data): array
+    {
         $name = $data['name'] ?? null;
         $extension = $data['extension'] ?? null;
         $number = $data['number'] ?? null;
@@ -223,73 +313,57 @@ class CardController extends AbstractController
         $numberCard = (int) ($data['numberCard'] ?? 1);
         $isFavorite = (bool) ($data['isFavorite'] ?? false);
 
-
         if (!$name || !$extension || !$number || !$gameTypeId || !$libraryId) {
-            return $this->json(['error' => 'Missing fields: name, extension, number, gameTypeId and libraryId required'], Response::HTTP_BAD_REQUEST);
+            return [
+                'error' => 'Missing fields: name, extension, number, gameTypeId and libraryId required',
+                'status' => Response::HTTP_BAD_REQUEST,
+            ];
         }
 
         if ($numberCard < 0) {
-            return $this->json(['error' => 'numberCard must be greater than or equal to 0'], Response::HTTP_BAD_REQUEST);
+            return [
+                'error' => 'numberCard must be greater than or equal to 0',
+                'status' => Response::HTTP_BAD_REQUEST,
+            ];
         }
 
-        $uuid = strtolower($name . '_' . $number . '_' . $extension);
+        $uuid = $this->buildCardUuid($name, $number, $extension);
 
         $gameType = $this->em->getRepository(GameType::class)->find($gameTypeId);
         if (!$gameType) {
-            return $this->json(['error' => 'GameType not found'], Response::HTTP_NOT_FOUND);
+            return [
+                'error' => 'GameType not found',
+                'status' => Response::HTTP_NOT_FOUND,
+            ];
         }
 
         $library = $this->em->getRepository(Library::class)->find($libraryId);
         if (!$library) {
-            return $this->json(['error' => 'Library not found'], Response::HTTP_NOT_FOUND);
+            return [
+                'error' => 'Library not found',
+                'status' => Response::HTTP_NOT_FOUND,
+            ];
         }
 
         $card = $this->em->getRepository(Card::class)->findOneBy([
             'uuid' => $uuid,
         ]);
 
+        $status = Response::HTTP_OK;
 
         if ($card) {
-
             $libraryCard = $this->em->getRepository(LibraryCard::class)->findOneBy([
                 'card' => $card,
                 'library' => $library,
             ]);
 
             if ($libraryCard) {
-                return $this->json(
-                    ['error' => 'Card already exists in library'],
-                    Response::HTTP_CONFLICT
-                );
+                return [
+                    'error' => 'Card already exists in library',
+                    'status' => Response::HTTP_CONFLICT,
+                ];
             }
-
-            $libraryCard = new LibraryCard();
-            $libraryCard->setCard($card);
-            $libraryCard->setLibrary($library);
-            $libraryCard->setNumberCard($numberCard);
-            $libraryCard->setIsFavorite($isFavorite);
-
-            $this->em->persist($libraryCard);
-            $this->em->flush();
-
-            return $this->json([
-                'id' => $card->getId(),
-                'name' => $card->getName(),
-                'extension' => $card->getExtension(),
-                'number' => $card->getNumber(),
-                'image' => $card->getImage(),
-                'uuid' => $card->getUuid(),
-                'numberCard' => $libraryCard->getNumberCard(),
-                'isFavorite' => $libraryCard->isFavorite(),
-                'gameType' => [
-                    'id' => $gameType->getId(),
-                    'nom' => $gameType->getName(),
-                    'abbreviated' => $gameType->getAbbreviated(),
-                    'url' => $gameType->getUrl(),
-                ],
-            ], Response::HTTP_OK);
         } else {
-
             $card = new Card();
             $card->setName($name);
             $card->setExtension($extension);
@@ -298,33 +372,54 @@ class CardController extends AbstractController
             $card->setGameType($gameType);
             $card->setUuid($uuid);
 
-            $libraryCard = new LibraryCard();
-            $libraryCard->setCard($card);
-            $libraryCard->setLibrary($library);
-            $libraryCard->setNumberCard($numberCard);
-            $libraryCard->setIsFavorite($isFavorite);
-
             $this->em->persist($card);
-            $this->em->persist($libraryCard);
-            $this->em->flush();
-
-            return $this->json([
-                'id' => $card->getId(),
-                'name' => $card->getName(),
-                'extension' => $card->getExtension(),
-                'number' => $card->getNumber(),
-                'image' => $card->getImage(),
-                'uuid' => $card->getUuid(),
-                'numberCard' => $libraryCard->getNumberCard(),
-                'isFavorite' => $libraryCard->isFavorite(),
-                'gameType' => [
-                    'id' => $gameType->getId(),
-                    'nom' => $gameType->getName(),
-                    'abbreviated' => $gameType->getAbbreviated(),
-                    'url' => $gameType->getUrl(),
-                ],
-            ], Response::HTTP_CREATED);
+            $status = Response::HTTP_CREATED;
         }
+
+        $libraryCard = new LibraryCard();
+        $libraryCard->setCard($card);
+        $libraryCard->setLibrary($library);
+        $libraryCard->setNumberCard($numberCard);
+        $libraryCard->setIsFavorite($isFavorite);
+
+        $this->em->persist($libraryCard);
+
+        return [
+            'card' => $card,
+            'libraryCard' => $libraryCard,
+            'status' => $status,
+        ];
+    }
+
+    private function buildCardUuid(?string $name, ?string $number, ?string $extension): ?string
+    {
+        if (!$name || !$number || !$extension) {
+            return null;
+        }
+
+        return strtolower($name . '_' . $number . '_' . $extension);
+    }
+
+    private function userCardToArray(Card $card, LibraryCard $libraryCard): array
+    {
+        $gameType = $card->getGameType();
+
+        return [
+            'id' => $card->getId(),
+            'name' => $card->getName(),
+            'extension' => $card->getExtension(),
+            'number' => $card->getNumber(),
+            'image' => $card->getImage(),
+            'uuid' => $card->getUuid(),
+            'numberCard' => $libraryCard->getNumberCard(),
+            'isFavorite' => $libraryCard->isFavorite(),
+            'gameType' => [
+                'id' => $gameType->getId(),
+                'nom' => $gameType->getName(),
+                'abbreviated' => $gameType->getAbbreviated(),
+                'url' => $gameType->getUrl(),
+            ],
+        ];
     }
 
     private function getOptionalLibrary(Request $request): ?Library
