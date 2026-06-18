@@ -49,6 +49,10 @@ class LibraryController extends AbstractController
             return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
         }
 
+        if ($user->isApiTokenExpired()) {
+            return $this->json(['error' => 'Token expired'], Response::HTTP_UNAUTHORIZED);
+        }
+
         return $user;
     }
 

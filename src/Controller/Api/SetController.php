@@ -48,6 +48,10 @@ class SetController extends AbstractController
             return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
         }
 
+        if ($user->isApiTokenExpired()) {
+            return $this->json(['error' => 'Token expired'], Response::HTTP_UNAUTHORIZED);
+        }
+
         return $user;
     }
 
@@ -69,14 +73,9 @@ class SetController extends AbstractController
     #[Route('/me/sets', name: 'api_me_sets', methods: ['GET'])]
     public function listSets(Request $request): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
         $library = $user->getLibrary();
@@ -105,14 +104,9 @@ class SetController extends AbstractController
     #[Route('/me/sets', name: 'api_me_sets_create', methods: ['POST'])]
     public function createSet(Request $request): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
         $library = $user->getLibrary();
@@ -163,14 +157,9 @@ class SetController extends AbstractController
     #[Route('/me/sets/{setId}', name: 'api_me_set_cards', methods: ['GET'])]
     public function listSetCards(Request $request, int $setId): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
         $set = $this->em->getRepository(GameSet::class)->find($setId);
@@ -315,14 +304,9 @@ class SetController extends AbstractController
     #[Route('/me/sets/{setId}/card', name: 'api_me_set_add_card', methods: ['POST'])]
     public function addCardToSet(Request $request, int $setId): JsonResponse
     {
-        $token = $this->extractBearerToken($request) ?? $request->query->get('apiToken');
-        if (!$token) {
-            return $this->json(['error' => 'No token provided'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $user = $this->em->getRepository(User::class)->findOneBy(['apiToken' => $token]);
-        if (!$user) {
-            return $this->json(['error' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
+        $user = $this->getAuthenticatedUser($request);
+        if ($user instanceof JsonResponse) {
+            return $user;
         }
 
         $set = $this->em->getRepository(GameSet::class)->find($setId);
