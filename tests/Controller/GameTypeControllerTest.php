@@ -9,7 +9,7 @@ final class GameTypeControllerTest extends WebTestCase
     public function testIndex(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/game/type');
+        $client->request('GET', '/api/gametype');
 
         self::assertResponseIsSuccessful();
     }
