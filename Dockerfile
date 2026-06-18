@@ -23,6 +23,4 @@ RUN php bin/console cache:clear --env=prod --no-warmup
 
 EXPOSE 10000
 
-CMD php bin/console doctrine:migrations:migrate --no-interaction \
- && php bin/console app:seed -n \
- && php -S 0.0.0.0:${PORT:-10000} -t public
+CMD php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:${PORT:-10000} -t public
